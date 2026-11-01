@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tuempresa.finanzasgrupo",
+      "bundleIdentifier": "com.salmeron.finanzas",
       "infoPlist": {
         "NSCameraUsageDescription": "Para tomar foto de tickets y evidencias de gastos.",
         "NSPhotoLibraryUsageDescription": "Para adjuntar fotos de tickets y elegir tu avatar.",
@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "package": "com.tuempresa.finanzasgrupo",
+      "package": "com.salmeron.finanzas",
       "adaptiveIcon": {
         "backgroundColor": "#6C5CE7",
         "foregroundImage": "./assets/android-icon-foreground.png",
