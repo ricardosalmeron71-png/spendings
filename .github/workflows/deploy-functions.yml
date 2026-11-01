@@ -11,7 +11,8 @@ jobs:
     env:
       # Acepta el token con cualquiera de los dos nombres
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN || secrets.FINANZAS_GITHUB }}
-      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      # El identificador del proyecto no es secreto; se puede sobrescribir con el secreto SUPABASE_PROJECT_REF
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'bwdkfahrgvqfqxryjfll' }}
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1

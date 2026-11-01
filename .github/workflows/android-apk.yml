@@ -20,7 +20,7 @@ jobs:
         run: npx eas-cli init --force --non-interactive
       - name: Inyectar llaves públicas de Supabase
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bwdkfahrgvqfqxryjfll.supabase.co' }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           jq --arg u "$SUPABASE_URL" --arg k "$SUPABASE_ANON_KEY" \
