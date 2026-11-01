@@ -1,0 +1,11 @@
+# Configuración mínima para Supabase CLI (supabase link / functions deploy)
+project_id = "finanzas-grupo"
+
+[functions.scheduler]
+verify_jwt = false
+
+[functions.assistant]
+verify_jwt = true
+
+[functions.belvo]
+verify_jwt = true
