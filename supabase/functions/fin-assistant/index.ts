@@ -1,12 +1,12 @@
-// Edge Function: assistant — asesor financiero con IA (Claude).
+// Edge Function: fin-assistant — asesor financiero con IA (Claude).
 //   POST { group_id, message }  → { reply }
-// Secret requerido: ANTHROPIC_API_KEY
+// Secret requerido: FIN_ANTHROPIC_API_KEY
 import Anthropic from 'npm:@anthropic-ai/sdk@1';
 import { adminClient, corsHeaders, handleError, HttpError, json, requireMember, requireUser } from '../_shared/admin.ts';
 import { addDays, localParts, weekStart } from '../_shared/dates.ts';
 
-const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
-const MODEL = Deno.env.get('ASSISTANT_MODEL') ?? 'claude-opus-5-5';
+const anthropic = new Anthropic({ apiKey: Deno.env.get('FIN_ANTHROPIC_API_KEY') });
+const MODEL = Deno.env.get('FIN_ASSISTANT_MODEL') ?? 'claude-opus-5-5';
 
 // Prompt estable (se cachea). No meter aquí nada que cambie por petición.
 const SYSTEM_PROMPT = `Eres "Fin", el asistente financiero de una app de control de gastos para familias y grupos en México.
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     return json({ reply });
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) return json({ error: 'El asistente está ocupado, intenta en un minuto.' }, 429);
-    if (e instanceof Anthropic.AuthenticationError) return json({ error: 'Falta configurar ANTHROPIC_API_KEY en Supabase.' }, 500);
+    if (e instanceof Anthropic.AuthenticationError) return json({ error: 'Falta configurar FIN_ANTHROPIC_API_KEY en Supabase.' }, 500);
     if (e instanceof Anthropic.APIError) {
       console.error('Anthropic', e.status, e.message);
       return json({ error: 'El asistente no está disponible por ahora.' }, 502);

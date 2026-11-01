@@ -30,14 +30,14 @@ export function useGroupRealtime() {
     if (!groupId) return;
     const channel = supabase
       .channel(`group-${groupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `group_id=eq.${groupId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'finanzas', table: 'transactions', filter: `group_id=eq.${groupId}` }, () => {
         qc.invalidateQueries({ queryKey: ['transactions', groupId] });
         qc.invalidateQueries({ queryKey: ['weekly', groupId] });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bills', filter: `group_id=eq.${groupId}` }, () =>
+      .on('postgres_changes', { event: '*', schema: 'finanzas', table: 'bills', filter: `group_id=eq.${groupId}` }, () =>
         qc.invalidateQueries({ queryKey: ['bills', groupId] }),
       )
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () =>
+      .on('postgres_changes', { event: 'INSERT', schema: 'finanzas', table: 'notifications', filter: `user_id=eq.${userId}` }, () =>
         qc.invalidateQueries({ queryKey: ['notifications', userId] }),
       )
       .subscribe();
@@ -169,7 +169,7 @@ export function useDeleteTransaction() {
       const atts = unwrap(await supabase.from('transaction_attachments').select('storage_path').eq('transaction_id', t.id)) as {
         storage_path: string;
       }[];
-      if (atts.length) await supabase.storage.from('evidence').remove(atts.map((a) => a.storage_path));
+      if (atts.length) await supabase.storage.from('fin_evidence').remove(atts.map((a) => a.storage_path));
       unwrap(await supabase.from('transactions').delete().eq('id', t.id));
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', groupId] }),

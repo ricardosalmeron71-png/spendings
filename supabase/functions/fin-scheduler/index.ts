@@ -1,10 +1,10 @@
-// Edge Function: scheduler — la invoca pg_cron (ver supabase/cron.sql).
+// Edge Function: fin-scheduler — la invoca pg_cron (ver supabase/cron.sql).
 //   ?job=push            → envía la cola de notificaciones push
 //   ?job=weekly_income   → jueves: quién no ha registrado ingresos
 //   ?job=bill_reminders  → pagos por vencer / vencidos
 //   ?job=monthly_summary → resumen del mes anterior
 //   ?job=bank_sync       → sincroniza conexiones bancarias
-// Desplegar con: supabase functions deploy scheduler --no-verify-jwt
+// Desplegar con: supabase functions deploy fin-scheduler --no-verify-jwt
 import { adminClient, json } from '../_shared/admin.ts';
 import { flushPushQueue } from '../_shared/push.ts';
 import { addDays, daysBetween, localParts, money, weekStart } from '../_shared/dates.ts';
@@ -23,7 +23,7 @@ type Notif = {
   dedupe_key?: string;
 };
 
-async function insertNotifications(db: SupabaseClient, rows: Notif[]) {
+async function insertNotifications(db: SupabaseClient<any, any, any>, rows: Notif[]) {
   if (!rows.length) return 0;
   const { data, error } = await db
     .from('notifications')
@@ -36,7 +36,7 @@ async function insertNotifications(db: SupabaseClient, rows: Notif[]) {
 // ---------------------------------------------------------------------------
 // Registro semanal de ingresos
 // ---------------------------------------------------------------------------
-async function weeklyIncome(db: SupabaseClient) {
+async function weeklyIncome(db: SupabaseClient<any, any, any>) {
   const { data: groups } = await db.from('groups').select('id, name, timezone, income_check_weekday');
   let created = 0;
 
@@ -98,7 +98,7 @@ async function weeklyIncome(db: SupabaseClient) {
 // ---------------------------------------------------------------------------
 // Recordatorios de pagos
 // ---------------------------------------------------------------------------
-async function billReminders(db: SupabaseClient) {
+async function billReminders(db: SupabaseClient<any, any, any>) {
   const { data: bills } = await db
     .from('bills')
     .select('id, group_id, name, amount, period_paid, next_due_date, remind_days_before, assigned_to, autopay, groups(timezone)')
@@ -150,7 +150,7 @@ async function billReminders(db: SupabaseClient) {
 // ---------------------------------------------------------------------------
 // Resumen mensual
 // ---------------------------------------------------------------------------
-async function monthlySummary(db: SupabaseClient) {
+async function monthlySummary(db: SupabaseClient<any, any, any>) {
   const now = new Date();
   const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
   const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0)).toISOString().slice(0, 10);
@@ -182,7 +182,7 @@ async function monthlySummary(db: SupabaseClient) {
   return { created: await insertNotifications(db, rows) };
 }
 
-async function bankSync(db: SupabaseClient) {
+async function bankSync(db: SupabaseClient<any, any, any>) {
   if (!belvoConfigured()) return { skipped: true };
   const { data: conns } = await db.from('bank_connections').select('*').eq('status', 'active');
   let imported = 0;
@@ -198,7 +198,7 @@ async function bankSync(db: SupabaseClient) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
+  if (req.headers.get('x-cron-secret') !== Deno.env.get('FIN_CRON_SECRET')) {
     return json({ error: 'forbidden' }, 403);
   }
   const job = new URL(req.url).searchParams.get('job');

@@ -1,9 +1,12 @@
 -- =====================================================================
 --  Finanzas en Grupo — esquema inicial
---  Ejecuta este archivo en Supabase (SQL Editor) o con `supabase db push`.
+--  Todo vive en el esquema `finanzas`: NO toca las tablas, funciones ni
+--  usuarios de otras apps que compartan el mismo proyecto de Supabase.
+--  Ejecuta este archivo completo en Supabase → SQL Editor.
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+create schema if not exists finanzas;
+set search_path = finanzas, public;
 
 -- ---------------------------------------------------------------------
 -- Tipos
@@ -27,7 +30,7 @@ exception when duplicate_object then null; end $$;
 -- ---------------------------------------------------------------------
 -- Perfiles (1:1 con auth.users)
 -- ---------------------------------------------------------------------
-create table if not exists public.profiles (
+create table if not exists finanzas.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   full_name     text not null default '',
   avatar_url    text,
@@ -39,18 +42,18 @@ create table if not exists public.profiles (
   updated_at    timestamptz not null default now()
 );
 
-create table if not exists public.push_tokens (
+create table if not exists finanzas.push_tokens (
   token       text primary key,
   user_id     uuid not null references auth.users(id) on delete cascade,
   platform    text,
   updated_at  timestamptz not null default now()
 );
-create index if not exists push_tokens_user_idx on public.push_tokens(user_id);
+create index if not exists push_tokens_user_idx on finanzas.push_tokens(user_id);
 
 -- ---------------------------------------------------------------------
 -- Grupos (familia / casa / roomies)
 -- ---------------------------------------------------------------------
-create table if not exists public.groups (
+create table if not exists finanzas.groups (
   id            uuid primary key default gen_random_uuid(),
   name          text not null,
   emoji         text not null default '🏠',
@@ -63,36 +66,36 @@ create table if not exists public.groups (
   created_at    timestamptz not null default now()
 );
 
-create table if not exists public.group_members (
-  group_id    uuid not null references public.groups(id) on delete cascade,
-  user_id     uuid not null references public.profiles(id) on delete cascade,
+create table if not exists finanzas.group_members (
+  group_id    uuid not null references finanzas.groups(id) on delete cascade,
+  user_id     uuid not null references finanzas.profiles(id) on delete cascade,
   role        member_role not null default 'member',
   -- Si es false, el miembro no está obligado al registro semanal de ingresos
   requires_weekly_income boolean not null default true,
   joined_at   timestamptz not null default now(),
   primary key (group_id, user_id)
 );
-create index if not exists group_members_user_idx on public.group_members(user_id);
+create index if not exists group_members_user_idx on finanzas.group_members(user_id);
 
-alter table public.profiles
+alter table finanzas.profiles
   drop constraint if exists profiles_active_group_fk,
-  add constraint profiles_active_group_fk foreign key (active_group_id) references public.groups(id) on delete set null;
+  add constraint profiles_active_group_fk foreign key (active_group_id) references finanzas.groups(id) on delete set null;
 
 -- ---------------------------------------------------------------------
 -- Funciones auxiliares de seguridad (evitan recursión en RLS)
 -- ---------------------------------------------------------------------
-create or replace function public.is_group_member(gid uuid)
-returns boolean language sql stable security definer set search_path = public as $$
+create or replace function finanzas.is_group_member(gid uuid)
+returns boolean language sql stable security definer set search_path = finanzas, public as $$
   select exists (select 1 from group_members where group_id = gid and user_id = auth.uid());
 $$;
 
-create or replace function public.is_group_admin(gid uuid)
-returns boolean language sql stable security definer set search_path = public as $$
+create or replace function finanzas.is_group_admin(gid uuid)
+returns boolean language sql stable security definer set search_path = finanzas, public as $$
   select exists (select 1 from group_members where group_id = gid and user_id = auth.uid() and role in ('owner','admin'));
 $$;
 
-create or replace function public.shares_group_with(other uuid)
-returns boolean language sql stable security definer set search_path = public as $$
+create or replace function finanzas.shares_group_with(other uuid)
+returns boolean language sql stable security definer set search_path = finanzas, public as $$
   select exists (
     select 1 from group_members a join group_members b on a.group_id = b.group_id
     where a.user_id = auth.uid() and b.user_id = other
@@ -102,9 +105,9 @@ $$;
 -- ---------------------------------------------------------------------
 -- Catálogos: categorías y formas de pago
 -- ---------------------------------------------------------------------
-create table if not exists public.categories (
+create table if not exists finanzas.categories (
   id          uuid primary key default gen_random_uuid(),
-  group_id    uuid not null references public.groups(id) on delete cascade,
+  group_id    uuid not null references finanzas.groups(id) on delete cascade,
   name        text not null,
   kind        txn_kind not null default 'expense',
   type        text not null default 'Otro',        -- "lista tipo": Casa, Servicio, Carro…
@@ -115,11 +118,11 @@ create table if not exists public.categories (
   created_at  timestamptz not null default now(),
   unique (group_id, kind, name)
 );
-create index if not exists categories_group_idx on public.categories(group_id);
+create index if not exists categories_group_idx on finanzas.categories(group_id);
 
-create table if not exists public.payment_methods (
+create table if not exists finanzas.payment_methods (
   id            uuid primary key default gen_random_uuid(),
-  group_id      uuid not null references public.groups(id) on delete cascade,
+  group_id      uuid not null references finanzas.groups(id) on delete cascade,
   owner_id      uuid references auth.users(id) on delete set null,
   name          text not null,                 -- "Nómina Ricardo", "HSBC 2Now", "AMEX"
   kind          payment_kind not null default 'debit',
@@ -132,19 +135,19 @@ create table if not exists public.payment_methods (
   archived      boolean not null default false,
   created_at    timestamptz not null default now()
 );
-create index if not exists payment_methods_group_idx on public.payment_methods(group_id);
+create index if not exists payment_methods_group_idx on finanzas.payment_methods(group_id);
 
 -- ---------------------------------------------------------------------
 -- Pagos recurrentes / recibos (calendario)
 -- ---------------------------------------------------------------------
-create table if not exists public.bills (
+create table if not exists finanzas.bills (
   id                uuid primary key default gen_random_uuid(),
-  group_id          uuid not null references public.groups(id) on delete cascade,
+  group_id          uuid not null references finanzas.groups(id) on delete cascade,
   name              text not null,
   amount            numeric(14,2) not null check (amount >= 0),
-  category_id       uuid references public.categories(id) on delete set null,
-  payment_method_id uuid references public.payment_methods(id) on delete set null,
-  assigned_to       uuid references public.profiles(id) on delete set null,
+  category_id       uuid references finanzas.categories(id) on delete set null,
+  payment_method_id uuid references finanzas.payment_methods(id) on delete set null,
+  assigned_to       uuid references finanzas.profiles(id) on delete set null,
   frequency         bill_frequency not null default 'monthly',
   next_due_date     date not null,
   cutoff_date       date,
@@ -156,20 +159,20 @@ create table if not exists public.bills (
   created_by        uuid references auth.users(id) default auth.uid(),
   created_at        timestamptz not null default now()
 );
-create index if not exists bills_group_due_idx on public.bills(group_id, next_due_date);
+create index if not exists bills_group_due_idx on finanzas.bills(group_id, next_due_date);
 
 -- ---------------------------------------------------------------------
 -- Movimientos
 -- ---------------------------------------------------------------------
-create table if not exists public.transactions (
+create table if not exists finanzas.transactions (
   id                uuid primary key default gen_random_uuid(),
-  group_id          uuid not null references public.groups(id) on delete cascade,
-  user_id           uuid not null references public.profiles(id),     -- "¿Quién?"
+  group_id          uuid not null references finanzas.groups(id) on delete cascade,
+  user_id           uuid not null references finanzas.profiles(id),     -- "¿Quién?"
   kind              txn_kind not null,
   amount            numeric(14,2) not null check (amount > 0),
-  category_id       uuid references public.categories(id) on delete set null,
-  payment_method_id uuid references public.payment_methods(id) on delete set null,
-  bill_id           uuid references public.bills(id) on delete set null,
+  category_id       uuid references finanzas.categories(id) on delete set null,
+  payment_method_id uuid references finanzas.payment_methods(id) on delete set null,
+  bill_id           uuid references finanzas.bills(id) on delete set null,
   goal_id           uuid,
   description       text not null default '',
   notes             text,
@@ -183,38 +186,38 @@ create table if not exists public.transactions (
   updated_at        timestamptz not null default now(),
   unique (group_id, bank_txn_id)
 );
-create index if not exists transactions_group_date_idx on public.transactions(group_id, occurred_on desc);
-create index if not exists transactions_user_idx on public.transactions(user_id, occurred_on desc);
-create index if not exists transactions_category_idx on public.transactions(category_id);
+create index if not exists transactions_group_date_idx on finanzas.transactions(group_id, occurred_on desc);
+create index if not exists transactions_user_idx on finanzas.transactions(user_id, occurred_on desc);
+create index if not exists transactions_category_idx on finanzas.transactions(category_id);
 
-create table if not exists public.transaction_attachments (
+create table if not exists finanzas.transaction_attachments (
   id              uuid primary key default gen_random_uuid(),
-  transaction_id  uuid not null references public.transactions(id) on delete cascade,
-  group_id        uuid not null references public.groups(id) on delete cascade,
+  transaction_id  uuid not null references finanzas.transactions(id) on delete cascade,
+  group_id        uuid not null references finanzas.groups(id) on delete cascade,
   storage_path    text not null,
   width           int,
   height          int,
   created_by      uuid references auth.users(id) default auth.uid(),
   created_at      timestamptz not null default now()
 );
-create index if not exists attachments_txn_idx on public.transaction_attachments(transaction_id);
+create index if not exists attachments_txn_idx on finanzas.transaction_attachments(transaction_id);
 
 -- ---------------------------------------------------------------------
 -- Presupuestos, plan mensual y metas de ahorro
 -- ---------------------------------------------------------------------
-create table if not exists public.budgets (
+create table if not exists finanzas.budgets (
   id            uuid primary key default gen_random_uuid(),
-  group_id      uuid not null references public.groups(id) on delete cascade,
-  category_id   uuid references public.categories(id) on delete cascade,   -- null = presupuesto total
+  group_id      uuid not null references finanzas.groups(id) on delete cascade,
+  category_id   uuid references finanzas.categories(id) on delete cascade,   -- null = presupuesto total
   amount        numeric(14,2) not null check (amount >= 0),
   alert_percent smallint not null default 80 check (alert_percent between 1 and 100),
   created_at    timestamptz not null default now()
 );
-create unique index if not exists budgets_unique_cat on public.budgets(group_id, coalesce(category_id, '00000000-0000-0000-0000-000000000000'::uuid));
+create unique index if not exists budgets_unique_cat on finanzas.budgets(group_id, coalesce(category_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
-create table if not exists public.monthly_plans (
+create table if not exists finanzas.monthly_plans (
   id                uuid primary key default gen_random_uuid(),
-  group_id          uuid not null references public.groups(id) on delete cascade,
+  group_id          uuid not null references finanzas.groups(id) on delete cascade,
   month             date not null,                        -- primer día del mes
   expected_income   numeric(14,2) not null default 0,
   savings_target    numeric(14,2) not null default 0,
@@ -225,9 +228,9 @@ create table if not exists public.monthly_plans (
   unique (group_id, month)
 );
 
-create table if not exists public.savings_goals (
+create table if not exists finanzas.savings_goals (
   id              uuid primary key default gen_random_uuid(),
-  group_id        uuid not null references public.groups(id) on delete cascade,
+  group_id        uuid not null references finanzas.groups(id) on delete cascade,
   name            text not null,
   emoji           text not null default '🎯',
   target_amount   numeric(14,2) not null check (target_amount > 0),
@@ -238,15 +241,15 @@ create table if not exists public.savings_goals (
   created_at      timestamptz not null default now()
 );
 
-alter table public.transactions
+alter table finanzas.transactions
   drop constraint if exists transactions_goal_fk,
-  add constraint transactions_goal_fk foreign key (goal_id) references public.savings_goals(id) on delete set null;
+  add constraint transactions_goal_fk foreign key (goal_id) references finanzas.savings_goals(id) on delete set null;
 
 -- ---------------------------------------------------------------------
 -- Registro semanal de ingresos
 -- ---------------------------------------------------------------------
-create table if not exists public.income_checkins (
-  group_id    uuid not null references public.groups(id) on delete cascade,
+create table if not exists finanzas.income_checkins (
+  group_id    uuid not null references finanzas.groups(id) on delete cascade,
   user_id     uuid not null references auth.users(id) on delete cascade,
   week_start  date not null,                -- lunes de la semana
   status      text not null check (status in ('registered', 'no_income')),
@@ -258,10 +261,10 @@ create table if not exists public.income_checkins (
 -- ---------------------------------------------------------------------
 -- Notificaciones (bandeja + cola de push)
 -- ---------------------------------------------------------------------
-create table if not exists public.notifications (
+create table if not exists finanzas.notifications (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
-  group_id    uuid references public.groups(id) on delete cascade,
+  group_id    uuid references finanzas.groups(id) on delete cascade,
   type        text not null default 'info',
   title       text not null,
   body        text not null,
@@ -272,33 +275,33 @@ create table if not exists public.notifications (
   created_at  timestamptz not null default now(),
   unique (user_id, dedupe_key)
 );
-create index if not exists notifications_user_idx on public.notifications(user_id, created_at desc);
-create index if not exists notifications_push_queue_idx on public.notifications(created_at) where pushed_at is null;
+create index if not exists notifications_user_idx on finanzas.notifications(user_id, created_at desc);
+create index if not exists notifications_push_queue_idx on finanzas.notifications(created_at) where pushed_at is null;
 
 -- ---------------------------------------------------------------------
 -- Asistente IA
 -- ---------------------------------------------------------------------
-create table if not exists public.assistant_messages (
+create table if not exists finanzas.assistant_messages (
   id          uuid primary key default gen_random_uuid(),
-  group_id    uuid not null references public.groups(id) on delete cascade,
+  group_id    uuid not null references finanzas.groups(id) on delete cascade,
   user_id     uuid not null references auth.users(id) on delete cascade,
   role        text not null check (role in ('user', 'assistant')),
   content     text not null,
   created_at  timestamptz not null default now()
 );
-create index if not exists assistant_messages_idx on public.assistant_messages(group_id, user_id, created_at);
+create index if not exists assistant_messages_idx on finanzas.assistant_messages(group_id, user_id, created_at);
 
 -- ---------------------------------------------------------------------
 -- Conexión bancaria (Belvo)
 -- ---------------------------------------------------------------------
-create table if not exists public.bank_connections (
+create table if not exists finanzas.bank_connections (
   id              uuid primary key default gen_random_uuid(),
-  group_id        uuid not null references public.groups(id) on delete cascade,
+  group_id        uuid not null references finanzas.groups(id) on delete cascade,
   user_id         uuid not null references auth.users(id) on delete cascade,
   provider        text not null default 'belvo',
   link_id         text not null unique,
   institution     text,
-  payment_method_id uuid references public.payment_methods(id) on delete set null,
+  payment_method_id uuid references finanzas.payment_methods(id) on delete set null,
   status          text not null default 'active',
   last_sync_at    timestamptz,
   created_at      timestamptz not null default now()
@@ -309,34 +312,52 @@ create table if not exists public.bank_connections (
 -- =====================================================================
 
 -- Nuevo usuario → perfil
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.handle_new_user()
+returns trigger language plpgsql security definer set search_path = finanzas, public as $$
 begin
-  insert into profiles (id, full_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)))
-  on conflict (id) do nothing;
+  begin
+    insert into profiles (id, full_name)
+    values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)))
+    on conflict (id) do nothing;
+  exception when others then
+    null; -- nunca bloquear el registro de usuarios de otras apps del proyecto
+  end;
   return new;
 end $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Perfil para quien ya existía en el proyecto (usuarios de la app de inglés) o si el trigger no corrió
+create or replace function finanzas.ensure_profile()
+returns finanzas.profiles language plpgsql security definer set search_path = finanzas, public as $$
+declare p profiles; u auth.users;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  select * into u from auth.users where id = auth.uid();
+  insert into profiles (id, full_name)
+  values (u.id, coalesce(u.raw_user_meta_data->>'full_name', split_part(u.email, '@', 1)))
+  on conflict (id) do nothing;
+  select * into p from profiles where id = auth.uid();
+  return p;
+end $$;
+
+drop trigger if exists finanzas_on_auth_user_created on auth.users;
+create trigger finanzas_on_auth_user_created after insert on auth.users
+  for each row execute function finanzas.handle_new_user();
 
 -- updated_at
-create or replace function public.touch_updated_at()
+create or replace function finanzas.touch_updated_at()
 returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end $$;
 
-drop trigger if exists transactions_touch on public.transactions;
-create trigger transactions_touch before update on public.transactions
-  for each row execute function public.touch_updated_at();
-drop trigger if exists profiles_touch on public.profiles;
-create trigger profiles_touch before update on public.profiles
-  for each row execute function public.touch_updated_at();
+drop trigger if exists transactions_touch on finanzas.transactions;
+create trigger transactions_touch before update on finanzas.transactions
+  for each row execute function finanzas.touch_updated_at();
+drop trigger if exists profiles_touch on finanzas.profiles;
+create trigger profiles_touch before update on finanzas.profiles
+  for each row execute function finanzas.touch_updated_at();
 
 -- Categorías por defecto (basadas en tu hoja "lista tipo")
-create or replace function public.seed_group_defaults(gid uuid)
-returns void language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.seed_group_defaults(gid uuid)
+returns void language plpgsql security definer set search_path = finanzas, public as $$
 begin
   insert into categories (group_id, kind, name, type, icon, color, is_essential) values
     (gid,'expense','Casa mensualidad','Casa','home','#5856D6',true),
@@ -389,8 +410,8 @@ end $$;
 --  RPCs
 -- =====================================================================
 
-create or replace function public.create_group(p_name text, p_emoji text default '🏠', p_currency text default 'MXN')
-returns public.groups language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.create_group(p_name text, p_emoji text default '🏠', p_currency text default 'MXN')
+returns finanzas.groups language plpgsql security definer set search_path = finanzas, public as $$
 declare g groups;
 begin
   if auth.uid() is null then raise exception 'not authenticated'; end if;
@@ -402,8 +423,8 @@ begin
   return g;
 end $$;
 
-create or replace function public.join_group(p_code text)
-returns public.groups language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.join_group(p_code text)
+returns finanzas.groups language plpgsql security definer set search_path = finanzas, public as $$
 declare g groups; joiner text;
 begin
   if auth.uid() is null then raise exception 'not authenticated'; end if;
@@ -418,8 +439,8 @@ begin
   return g;
 end $$;
 
-create or replace function public.regenerate_invite_code(p_group uuid)
-returns text language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.regenerate_invite_code(p_group uuid)
+returns text language plpgsql security definer set search_path = finanzas, public as $$
 declare c text;
 begin
   if not is_group_admin(p_group) then raise exception 'forbidden'; end if;
@@ -428,22 +449,22 @@ begin
   return c;
 end $$;
 
-create or replace function public.leave_group(p_group uuid)
-returns void language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.leave_group(p_group uuid)
+returns void language plpgsql security definer set search_path = finanzas, public as $$
 begin
   delete from group_members where group_id = p_group and user_id = auth.uid();
   update profiles set active_group_id = null where id = auth.uid() and active_group_id = p_group;
 end $$;
 
 -- Lunes de la semana para una fecha
-create or replace function public.week_start(d date)
+create or replace function finanzas.week_start(d date)
 returns date language sql immutable as $$ select (d - ((extract(isodow from d)::int) - 1))::date $$;
 
 -- Estado semanal de ingresos por miembro
-create or replace function public.weekly_income_status(p_group uuid, p_week date default null)
+create or replace function finanzas.weekly_income_status(p_group uuid, p_week date default null)
 returns table (user_id uuid, full_name text, avatar_url text, avatar_emoji text, avatar_color text,
                income_total numeric, status text)
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = finanzas, public as $$
   with wk as (select week_start(coalesce(p_week, (now() at time zone (select timezone from groups where id = p_group))::date)) as ws)
   select m.user_id, p.full_name, p.avatar_url, p.avatar_emoji, p.avatar_color,
          coalesce(sum(t.amount), 0) as income_total,
@@ -464,7 +485,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- Registrar pago de un recibo (crea movimiento y avanza fecha si se completó)
-create or replace function public.next_bill_date(d date, f bill_frequency)
+create or replace function finanzas.next_bill_date(d date, f bill_frequency)
 returns date language sql immutable as $$
   select case f
     when 'weekly' then d + 7
@@ -476,9 +497,9 @@ returns date language sql immutable as $$
     else d end;
 $$;
 
-create or replace function public.pay_bill(p_bill uuid, p_amount numeric default null, p_date date default current_date,
+create or replace function finanzas.pay_bill(p_bill uuid, p_amount numeric default null, p_date date default current_date,
                                            p_payment_method uuid default null, p_user uuid default null)
-returns public.transactions language plpgsql security definer set search_path = public as $$
+returns finanzas.transactions language plpgsql security definer set search_path = finanzas, public as $$
 declare b bills; t transactions; amt numeric;
 begin
   select * into b from bills where id = p_bill;
@@ -506,8 +527,8 @@ begin
 end $$;
 
 -- Aportar a meta de ahorro
-create or replace function public.contribute_goal(p_goal uuid, p_amount numeric)
-returns void language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.contribute_goal(p_goal uuid, p_amount numeric)
+returns void language plpgsql security definer set search_path = finanzas, public as $$
 declare g savings_goals;
 begin
   select * into g from savings_goals where id = p_goal;
@@ -526,8 +547,8 @@ end $$;
 -- =====================================================================
 
 -- Alerta de presupuesto al registrar gastos
-create or replace function public.check_budget_after_expense()
-returns trigger language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.check_budget_after_expense()
+returns trigger language plpgsql security definer set search_path = finanzas, public as $$
 declare
   b record; spent numeric; pct numeric; m_start date; cat_name text;
 begin
@@ -561,13 +582,13 @@ begin
   return new;
 end $$;
 
-drop trigger if exists transactions_budget_check on public.transactions;
-create trigger transactions_budget_check after insert on public.transactions
-  for each row execute function public.check_budget_after_expense();
+drop trigger if exists transactions_budget_check on finanzas.transactions;
+create trigger transactions_budget_check after insert on finanzas.transactions
+  for each row execute function finanzas.check_budget_after_expense();
 
 -- Aviso al grupo cuando alguien registra un gasto grande o un ingreso
-create or replace function public.notify_group_on_txn()
-returns trigger language plpgsql security definer set search_path = public as $$
+create or replace function finanzas.notify_group_on_txn()
+returns trigger language plpgsql security definer set search_path = finanzas, public as $$
 declare who text; sym text;
 begin
   if new.bank_txn_id is not null then return new; end if;
@@ -592,58 +613,58 @@ begin
   return new;
 end $$;
 
-drop trigger if exists transactions_notify_group on public.transactions;
-create trigger transactions_notify_group after insert on public.transactions
-  for each row execute function public.notify_group_on_txn();
+drop trigger if exists transactions_notify_group on finanzas.transactions;
+create trigger transactions_notify_group after insert on finanzas.transactions
+  for each row execute function finanzas.notify_group_on_txn();
 
 -- =====================================================================
 --  Row Level Security
 -- =====================================================================
-alter table public.profiles                enable row level security;
-alter table public.push_tokens             enable row level security;
-alter table public.groups                  enable row level security;
-alter table public.group_members           enable row level security;
-alter table public.categories              enable row level security;
-alter table public.payment_methods         enable row level security;
-alter table public.bills                   enable row level security;
-alter table public.transactions            enable row level security;
-alter table public.transaction_attachments enable row level security;
-alter table public.budgets                 enable row level security;
-alter table public.monthly_plans           enable row level security;
-alter table public.savings_goals           enable row level security;
-alter table public.income_checkins         enable row level security;
-alter table public.notifications           enable row level security;
-alter table public.assistant_messages      enable row level security;
-alter table public.bank_connections        enable row level security;
+alter table finanzas.profiles                enable row level security;
+alter table finanzas.push_tokens             enable row level security;
+alter table finanzas.groups                  enable row level security;
+alter table finanzas.group_members           enable row level security;
+alter table finanzas.categories              enable row level security;
+alter table finanzas.payment_methods         enable row level security;
+alter table finanzas.bills                   enable row level security;
+alter table finanzas.transactions            enable row level security;
+alter table finanzas.transaction_attachments enable row level security;
+alter table finanzas.budgets                 enable row level security;
+alter table finanzas.monthly_plans           enable row level security;
+alter table finanzas.savings_goals           enable row level security;
+alter table finanzas.income_checkins         enable row level security;
+alter table finanzas.notifications           enable row level security;
+alter table finanzas.assistant_messages      enable row level security;
+alter table finanzas.bank_connections        enable row level security;
 
 -- profiles
-drop policy if exists "profiles read" on public.profiles;
-create policy "profiles read" on public.profiles for select
+drop policy if exists "profiles read" on finanzas.profiles;
+create policy "profiles read" on finanzas.profiles for select
   using (id = auth.uid() or shares_group_with(id));
-drop policy if exists "profiles update self" on public.profiles;
-create policy "profiles update self" on public.profiles for update
+drop policy if exists "profiles update self" on finanzas.profiles;
+create policy "profiles update self" on finanzas.profiles for update
   using (id = auth.uid()) with check (id = auth.uid());
 
 -- push tokens
-drop policy if exists "push tokens own" on public.push_tokens;
-create policy "push tokens own" on public.push_tokens for all
+drop policy if exists "push tokens own" on finanzas.push_tokens;
+create policy "push tokens own" on finanzas.push_tokens for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- groups
-drop policy if exists "groups read" on public.groups;
-create policy "groups read" on public.groups for select using (is_group_member(id));
-drop policy if exists "groups update admin" on public.groups;
-create policy "groups update admin" on public.groups for update using (is_group_admin(id));
-drop policy if exists "groups delete owner" on public.groups;
-create policy "groups delete owner" on public.groups for delete using (owner_id = auth.uid());
+drop policy if exists "groups read" on finanzas.groups;
+create policy "groups read" on finanzas.groups for select using (is_group_member(id));
+drop policy if exists "groups update admin" on finanzas.groups;
+create policy "groups update admin" on finanzas.groups for update using (is_group_admin(id));
+drop policy if exists "groups delete owner" on finanzas.groups;
+create policy "groups delete owner" on finanzas.groups for delete using (owner_id = auth.uid());
 
 -- group members
-drop policy if exists "members read" on public.group_members;
-create policy "members read" on public.group_members for select using (is_group_member(group_id));
-drop policy if exists "members admin update" on public.group_members;
-create policy "members admin update" on public.group_members for update using (is_group_admin(group_id));
-drop policy if exists "members admin delete" on public.group_members;
-create policy "members admin delete" on public.group_members for delete
+drop policy if exists "members read" on finanzas.group_members;
+create policy "members read" on finanzas.group_members for select using (is_group_member(group_id));
+drop policy if exists "members admin update" on finanzas.group_members;
+create policy "members admin update" on finanzas.group_members for update using (is_group_admin(group_id));
+drop policy if exists "members admin delete" on finanzas.group_members;
+create policy "members admin delete" on finanzas.group_members for delete
   using (is_group_admin(group_id) or user_id = auth.uid());
 
 -- Tablas de grupo: cualquier miembro lee/escribe
@@ -653,22 +674,22 @@ begin
   foreach t in array array['categories','payment_methods','bills','transactions','transaction_attachments',
                            'budgets','monthly_plans','savings_goals','income_checkins','bank_connections']
   loop
-    execute format('drop policy if exists "%1$s member all" on public.%1$s', t);
-    execute format('create policy "%1$s member all" on public.%1$s for all using (is_group_member(group_id)) with check (is_group_member(group_id))', t);
+    execute format('drop policy if exists "%1$s member all" on finanzas.%1$s', t);
+    execute format('create policy "%1$s member all" on finanzas.%1$s for all using (is_group_member(group_id)) with check (is_group_member(group_id))', t);
   end loop;
 end $$;
 
 -- notifications: solo las propias
-drop policy if exists "notifications own" on public.notifications;
-create policy "notifications own" on public.notifications for select using (user_id = auth.uid());
-drop policy if exists "notifications own update" on public.notifications;
-create policy "notifications own update" on public.notifications for update using (user_id = auth.uid());
-drop policy if exists "notifications own delete" on public.notifications;
-create policy "notifications own delete" on public.notifications for delete using (user_id = auth.uid());
+drop policy if exists "notifications own" on finanzas.notifications;
+create policy "notifications own" on finanzas.notifications for select using (user_id = auth.uid());
+drop policy if exists "notifications own update" on finanzas.notifications;
+create policy "notifications own update" on finanzas.notifications for update using (user_id = auth.uid());
+drop policy if exists "notifications own delete" on finanzas.notifications;
+create policy "notifications own delete" on finanzas.notifications for delete using (user_id = auth.uid());
 
 -- assistant: cada quien su conversación dentro del grupo
-drop policy if exists "assistant own" on public.assistant_messages;
-create policy "assistant own" on public.assistant_messages for all
+drop policy if exists "assistant own" on finanzas.assistant_messages;
+create policy "assistant own" on finanzas.assistant_messages for all
   using (user_id = auth.uid() and is_group_member(group_id))
   with check (user_id = auth.uid() and is_group_member(group_id));
 
@@ -676,46 +697,60 @@ create policy "assistant own" on public.assistant_messages for all
 --  Storage: evidencias (privado) y avatars (público)
 -- =====================================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('evidence', 'evidence', false, 10485760, array['image/jpeg','image/png','image/webp','image/heic','application/pdf'])
+values ('fin_evidence', 'fin_evidence', false, 10485760, array['image/jpeg','image/png','image/webp','image/heic','application/pdf'])
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('avatars', 'avatars', true, 5242880, array['image/jpeg','image/png','image/webp'])
+values ('fin_avatars', 'fin_avatars', true, 5242880, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
 
 -- evidence/{group_id}/{transaction_id}/{archivo}
-drop policy if exists "evidence member read" on storage.objects;
-create policy "evidence member read" on storage.objects for select
-  using (bucket_id = 'evidence' and public.is_group_member((storage.foldername(name))[1]::uuid));
-drop policy if exists "evidence member insert" on storage.objects;
-create policy "evidence member insert" on storage.objects for insert
-  with check (bucket_id = 'evidence' and public.is_group_member((storage.foldername(name))[1]::uuid));
-drop policy if exists "evidence member delete" on storage.objects;
-create policy "evidence member delete" on storage.objects for delete
-  using (bucket_id = 'evidence' and public.is_group_member((storage.foldername(name))[1]::uuid));
+drop policy if exists "fin evidence member read" on storage.objects;
+create policy "fin evidence member read" on storage.objects for select
+  using (bucket_id = 'fin_evidence' and finanzas.is_group_member((storage.foldername(name))[1]::uuid));
+drop policy if exists "fin evidence member insert" on storage.objects;
+create policy "fin evidence member insert" on storage.objects for insert
+  with check (bucket_id = 'fin_evidence' and finanzas.is_group_member((storage.foldername(name))[1]::uuid));
+drop policy if exists "fin evidence member delete" on storage.objects;
+create policy "fin evidence member delete" on storage.objects for delete
+  using (bucket_id = 'fin_evidence' and finanzas.is_group_member((storage.foldername(name))[1]::uuid));
 
 -- avatars/{user_id}/{archivo}
-drop policy if exists "avatars public read" on storage.objects;
-create policy "avatars public read" on storage.objects for select using (bucket_id = 'avatars');
-drop policy if exists "avatars own write" on storage.objects;
-create policy "avatars own write" on storage.objects for insert
-  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
-drop policy if exists "avatars own update" on storage.objects;
-create policy "avatars own update" on storage.objects for update
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
-drop policy if exists "avatars own delete" on storage.objects;
-create policy "avatars own delete" on storage.objects for delete
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "fin avatars public read" on storage.objects;
+create policy "fin avatars public read" on storage.objects for select using (bucket_id = 'fin_avatars');
+drop policy if exists "fin avatars own write" on storage.objects;
+create policy "fin avatars own write" on storage.objects for insert
+  with check (bucket_id = 'fin_avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "fin avatars own update" on storage.objects;
+create policy "fin avatars own update" on storage.objects for update
+  using (bucket_id = 'fin_avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "fin avatars own delete" on storage.objects;
+create policy "fin avatars own delete" on storage.objects for delete
+  using (bucket_id = 'fin_avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =====================================================================
 --  Realtime (para que el grupo vea cambios al instante)
 -- =====================================================================
 do $$ begin
-  alter publication supabase_realtime add table public.transactions;
+  alter publication supabase_realtime add table finanzas.transactions;
 exception when others then null; end $$;
 do $$ begin
-  alter publication supabase_realtime add table public.bills;
+  alter publication supabase_realtime add table finanzas.bills;
 exception when others then null; end $$;
 do $$ begin
-  alter publication supabase_realtime add table public.notifications;
+  alter publication supabase_realtime add table finanzas.notifications;
 exception when others then null; end $$;
+
+
+-- =====================================================================
+--  Permisos de la API (PostgREST) para el esquema finanzas
+--  La seguridad real la imponen las políticas RLS de arriba.
+-- =====================================================================
+grant usage on schema finanzas to authenticated, service_role;
+grant select, insert, update, delete on all tables in schema finanzas to authenticated;
+grant all on all tables in schema finanzas to service_role;
+revoke execute on all functions in schema finanzas from public, anon;
+grant execute on all functions in schema finanzas to authenticated, service_role;
+alter default privileges in schema finanzas grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema finanzas grant all on tables to service_role;
+alter default privileges in schema finanzas grant execute on functions to authenticated, service_role;

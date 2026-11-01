@@ -49,7 +49,7 @@ export async function uploadEvidence(groupId: string, transactionId: string, ima
   for (const img of images) {
     const c = await compress(img.uri);
     const path = `${groupId}/${transactionId}/${uuid()}.jpg`;
-    await uploadFile('evidence', path, c.uri);
+    await uploadFile('fin_evidence', path, c.uri);
     const { error } = await supabase.from('transaction_attachments').insert({
       transaction_id: transactionId,
       group_id: groupId,
@@ -62,14 +62,14 @@ export async function uploadEvidence(groupId: string, transactionId: string, ima
 }
 
 export async function deleteEvidence(id: string, path: string) {
-  await supabase.storage.from('evidence').remove([path]);
+  await supabase.storage.from('fin_evidence').remove([path]);
   await supabase.from('transaction_attachments').delete().eq('id', id);
 }
 
 /** URLs firmadas temporales (el bucket es privado). */
 export async function signedUrls(paths: string[]) {
   if (!paths.length) return {} as Record<string, string>;
-  const { data } = await supabase.storage.from('evidence').createSignedUrls(paths, 3600);
+  const { data } = await supabase.storage.from('fin_evidence').createSignedUrls(paths, 3600);
   const map: Record<string, string> = {};
   for (const d of data ?? []) if (d.path && d.signedUrl) map[d.path] = d.signedUrl;
   return map;
@@ -81,7 +81,7 @@ export async function uploadAvatar(userId: string, uri: string) {
     format: ImageManipulator.SaveFormat.JPEG,
   });
   const path = `${userId}/avatar-${Date.now()}.jpg`;
-  await uploadFile('avatars', path, out.uri);
-  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  await uploadFile('fin_avatars', path, out.uri);
+  const { data } = supabase.storage.from('fin_avatars').getPublicUrl(path);
   return data.publicUrl;
 }

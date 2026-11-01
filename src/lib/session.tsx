@@ -41,7 +41,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const profileQ = useQuery({
     queryKey: ['profile', userId],
     enabled: !!userId,
-    queryFn: async () => unwrap(await supabase.from('profiles').select('*').eq('id', userId!).single()) as Profile,
+    queryFn: async () => {
+      const found = unwrap(await supabase.from('profiles').select('*').eq('id', userId!).maybeSingle()) as Profile | null;
+      if (found) return found;
+      // Usuario que ya existía en el proyecto (p. ej. de la app de inglés): se le crea su perfil
+      return unwrap(await supabase.rpc('ensure_profile')) as Profile;
+    },
   });
 
   const groupsQ = useQuery({

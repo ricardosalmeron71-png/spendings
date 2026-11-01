@@ -1,215 +1,141 @@
 # Guía de instalación — Finanzas en Grupo
 
-Sigue los pasos en orden. Te toma entre 45 y 90 minutos la primera vez.
+Esta guía asume que usas tu proyecto de Supabase **`ingles`** (el mismo de tu app de inglés) y que todo se hace **desde el celular**, con el navegador y GitHub. Sin computadora.
+
+## Cómo convive con la app de inglés
+
+Todo lo de esta app queda aislado y con prefijo propio:
+
+| Qué | Dónde queda |
+|-----|-------------|
+| Tablas, funciones y tipos | Esquema nuevo `finanzas` (no se toca `public`) |
+| Fotos | Buckets `fin_evidence` y `fin_avatars` |
+| Funciones del servidor | `fin-assistant`, `fin-scheduler`, `fin-belvo` |
+| Secretos | `FIN_ANTHROPIC_API_KEY`, `FIN_CRON_SECRET` |
+| Tareas programadas | Nombres que empiezan con `fin-` |
+
+Lo único compartido son los **usuarios** (Authentication): quien ya tenga cuenta en la app de inglés puede entrar con el mismo correo y contraseña, y al entrar se le crea su perfil de finanzas.
+
+⚠️ **No cambies** en Authentication ajustes como "Confirm email" ni proveedores: afectan también a la app de inglés.
 
 ---
 
-## 0. Lo que necesito de ti (checklist)
+## 0. Lo que necesitas (checklist)
 
 | # | Qué | Para qué | Costo |
 |---|-----|----------|-------|
-| 1 | Cuenta en [supabase.com](https://supabase.com) | Base de datos, login, fotos, cron | Plan gratis alcanza para empezar |
-| 2 | Cuenta en [expo.dev](https://expo.dev) | Compilar la app y enviar push | Gratis |
-| 3 | API key de Anthropic ([console.anthropic.com](https://console.anthropic.com)) | Asistente con IA "Fin" | Pago por uso |
-| 4 | Proyecto en [Firebase](https://console.firebase.google.com) | Push en Android (FCM) | Gratis |
-| 5 | Apple Developer Program | Publicar en iPhone y push en iOS | 99 USD/año |
-| 6 | Google Play Console | Publicar en Android | 25 USD una vez |
-| 7 | *(Opcional)* Cuenta en [Belvo](https://belvo.com) | Conexión bancaria automática | Sandbox gratis; producción con contrato |
-| 8 | Node.js 20 o superior en tu computadora | Correr y compilar | Gratis |
+| 1 | Tu proyecto Supabase `ingles` | Base de datos, login, fotos, cron | Ya lo tienes (gratis) |
+| 2 | Cuenta en [expo.dev](https://expo.dev) | Compilar el APK | Gratis (pocas compilaciones al mes) |
+| 3 | API key de Anthropic ([console.anthropic.com](https://console.anthropic.com)) | Asistente "Fin" | Pago por uso |
+| 4 | Proyecto en [Firebase](https://console.firebase.google.com) | Push remotas en Android (opcional) | Gratis |
+| 5 | *(Opcional)* Cuenta en [Belvo](https://belvo.com) | Conexión bancaria | Sandbox gratis |
 
-También decide:
-- **Nombre del paquete** (ej. `com.salmeron.finanzas`): reemplaza `com.tuempresa.finanzasgrupo` en `app.json` (`ios.bundleIdentifier` y `android.package`). **No se puede cambiar después de publicar.**
-- **Zona horaria** de tu grupo (por defecto `America/Mexico_City`).
+Solo Android es gratis. En iPhone se necesita Apple Developer (99 USD al año).
 
 ---
 
-## 1. Supabase: crear el proyecto
+## 1. Supabase: crear las tablas
 
-1. En supabase.com → **New project**. Región sugerida: `East US (North Virginia)` (la más cercana a México). Guarda la contraseña de la base de datos.
-2. Ve a **Project Settings → API** y copia:
-   - `Project URL` → `https://XXXX.supabase.co`
-   - `anon public key`
-   - `Project ref` (las letras `XXXX` de la URL)
+1. Abre tu proyecto `ingles` → **SQL Editor → New query**.
+2. Copia el contenido de `supabase/migrations/20261101000000_init.sql` desde GitHub (botón *Raw* → seleccionar todo → copiar) y pégalo.
+3. Presiona **Run**. Debe terminar en "Success".
 
-## 2. Supabase: crear la base de datos
+Es seguro para el proyecto de inglés: solo **crea** cosas nuevas dentro del esquema `finanzas`, los buckets `fin_*` y un disparador llamado `finanzas_on_auth_user_created` (a prueba de fallos: si algo falla, nunca bloquea un registro).
 
-**Opción A (más fácil): SQL Editor**
-1. Dashboard → **SQL Editor → New query**.
-2. Pega todo el contenido de `supabase/migrations/20261101000000_init.sql` y presiona **Run**.
-3. Debe terminar en "Success". Esto crea tablas, seguridad por grupo (RLS), triggers de alertas, categorías iniciales (las de tu hoja: Casa, Servicio, Carro, Médico, etc.) y los buckets `evidence` (privado) y `avatars` (público).
+**Exponer el esquema en la API** (obligatorio):
+- **Project Settings → API → Data API Settings → Exposed schemas** → agrega `finanzas` y guarda.
 
-**Opción B: Supabase CLI**
-```bash
-npm i -g supabase
-```
-```bash
-supabase login
-```
-```bash
-supabase link --project-ref TU-PROJECT-REF
-```
-```bash
-supabase db push
-```
+Copia también, de esa misma pantalla de API:
+- `Project URL`: `https://bwdkfahrgvqfqxryjfll.supabase.co`
+- `anon public key`
+- el **Project ref**: `bwdkfahrgvqfqxryjfll` (la parte antes de `.supabase.co`)
 
-## 3. Supabase: autenticación
+En **Authentication → URL Configuration → Redirect URLs** agrega `finanzas://` (solo añade, no cambia nada existente).
 
-Dashboard → **Authentication → Sign In / Providers → Email**:
-- Para pruebas rápidas puedes desactivar **Confirm email**. En producción déjalo activo.
+## 2. Llaves y tokens
 
-Dashboard → **Authentication → URL Configuration**:
-- Agrega `finanzas://` en **Redirect URLs**.
+Consigue estos valores:
 
-## 4. Edge Functions (asistente IA, recordatorios, banco)
+| Valor | Dónde se obtiene |
+|-------|------------------|
+| `SUPABASE_ACCESS_TOKEN` | supabase.com → foto de perfil → **Account → Access Tokens → Generate new token** |
+| `FIN_ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+| `FIN_CRON_SECRET` | Invéntalo: una cadena larga y aleatoria (40+ caracteres, letras y números). Anótala, la usarás también en el paso 4 |
+| `EXPO_TOKEN` | expo.dev → Account Settings → Access Tokens → Create |
 
-Instala la CLI (paso 2B) y enlaza el proyecto. Luego configura los secretos:
+## 3. Guardarlos en GitHub
 
-```bash
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-tu-llave
-```
-Genera un secreto aleatorio para el cron y **cópialo** (lo usarás también en el paso 5; después Supabase ya no lo muestra):
-```bash
-openssl rand -hex 32
-```
-```bash
-supabase secrets set CRON_SECRET=EL_VALOR_QUE_COPIASTE
-```
+En tu repositorio: **Settings → Secrets and variables → Actions → New repository secret**. Crea estos 7:
 
-Opcionales:
-```bash
-supabase secrets set EXPO_ACCESS_TOKEN=tu-token-de-expo
-```
-(Solo si activas "Enhanced Security for Push Notifications" en expo.dev.)
+| Nombre | Valor |
+|--------|-------|
+| `SUPABASE_URL` | `https://bwdkfahrgvqfqxryjfll.supabase.co` |
+| `SUPABASE_ANON_KEY` | la llave `anon public` |
+| `SUPABASE_PROJECT_REF` | `bwdkfahrgvqfqxryjfll` |
+| `SUPABASE_ACCESS_TOKEN` | el token de Supabase |
+| `FIN_ANTHROPIC_API_KEY` | tu llave de Anthropic |
+| `FIN_CRON_SECRET` | tu cadena aleatoria |
+| `EXPO_TOKEN` | el token de Expo |
 
-```bash
-supabase secrets set ASSISTANT_MODEL=claude-opus-5-5
-```
-(Es el modelo por defecto. Si quieres reducir costos puedes usar `claude-sonnet-5-5` o `claude-haiku-5-5`.)
+## 4. Desplegar las funciones del servidor
 
-Despliega las funciones:
-```bash
-supabase functions deploy assistant
-```
-```bash
-supabase functions deploy belvo
-```
-```bash
-supabase functions deploy scheduler --no-verify-jwt
-```
+1. En GitHub abre **Actions → Desplegar funciones de Supabase → Run workflow** (elige la rama `claude/eloquent-ramanujan-dsz763`).
+2. Espera 2–4 minutos hasta que salga en verde. Esto sube `fin-assistant`, `fin-belvo` y `fin-scheduler` y guarda sus secretos.
 
-> `scheduler` no usa JWT porque la llama `pg_cron`; está protegida con el header `x-cron-secret`.
+## 5. Tareas programadas (avisos con la app cerrada)
 
-## 5. Tareas programadas (notificaciones con la app cerrada)
-
-1. Dashboard → **Database → Extensions**: activa **pg_cron** y **pg_net**.
-2. Abre `supabase/cron.sql`, reemplaza:
-   - `<<<TU-PROJECT-REF>>>` por tu project ref
-   - `<<<EL MISMO VALOR QUE CRON_SECRET…>>>` por el valor de `CRON_SECRET`
-3. Pégalo en el SQL Editor y ejecútalo **una sola vez**.
-
-Qué queda programado:
+1. En Supabase: **Database → Extensions** → activa **pg_cron** y **pg_net** (si no estaban).
+2. Abre `supabase/cron.sql` en GitHub (*Raw*), cópialo y, antes de pegarlo en el **SQL Editor**, reemplaza:
+   - `<<<TU-PROJECT-REF>>>` → `bwdkfahrgvqfqxryjfll`
+   - `<<<EL MISMO VALOR QUE FIN_CRON_SECRET>>>` → tu cadena aleatoria
+3. Ejecútalo **una sola vez**.
 
 | Tarea | Cuándo | Qué hace |
 |-------|--------|----------|
-| `push-queue` | cada minuto | Envía como push todas las notificaciones nuevas (gasto grande, ingreso registrado, presupuesto, nuevo miembro…) |
-| `weekly-income` | cada hora | El **día configurado (jueves por defecto)**: 10:00 recuerda a quien no ha registrado ingresos; 20:00 avisa a todo el grupo quién falta |
-| `bill-reminders` | diario 9:00 CDMX | Pagos por vencer (N días antes, un día antes, el mismo día) y vencidos (1, 3 y 7 días) |
-| `monthly-summary` | día 1, 10:00 | Resumen del mes anterior: ingresos, gastos y % de ahorro |
-| `bank-sync` | cada 6 h | Importa movimientos bancarios (si configuraste Belvo) |
+| `fin-push-queue` | cada minuto | Envía como push las notificaciones nuevas (gasto grande, ingreso, presupuesto, nuevo miembro…) |
+| `fin-weekly-income` | cada hora | El **día configurado (jueves por defecto)**: 10:00 recuerda a quien no ha registrado; 20:00 avisa al grupo quién falta |
+| `fin-bill-reminders` | diario 9:00 CDMX | Pagos por vencer y vencidos |
+| `fin-monthly-summary` | día 1, 10:00 | Resumen del mes anterior |
+| `fin-bank-sync` | cada 6 h | Importa movimientos bancarios (solo si configuras Belvo) |
 
-Además, la app programa **notificaciones locales** en cada teléfono (pagos, recordatorio de jueves y recordatorio diario de gastos) que funcionan aunque la app esté cerrada y sin internet.
+Además, la app programa **notificaciones locales** en el teléfono (pagos, recordatorio del jueves y diario) que funcionan con la app cerrada y sin internet.
 
-Para probar el cron manualmente:
-```bash
-curl -X POST "https://TU-PROJECT-REF.supabase.co/functions/v1/scheduler?job=bill_reminders" -H "x-cron-secret: TU_CRON_SECRET"
-```
+> Plan gratis: Supabase pausa los proyectos tras ~1 semana sin actividad. La app de inglés y estas tareas lo mantienen activo, pero si lo pausan, reactívalo desde el dashboard.
 
-## 6. La app móvil
+## 6. Compilar e instalar el APK (Android)
 
-```bash
-npm install
-```
-```bash
-cp .env.example .env
-```
-Edita `.env` con tu `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+1. En `app.json` (editar desde GitHub con el lápiz) cambia `com.tuempresa.finanzasgrupo` (2 veces) por un nombre tuyo, por ejemplo `com.salmeron.finanzas`. No se puede cambiar después de publicar.
+2. **Actions → Compilar APK Android → Run workflow**.
+3. En 15–25 minutos aparece un enlace de descarga en el resumen de la ejecución. Ábrelo en el celular, descarga el APK e instálalo (Android pedirá permitir instalar de fuentes desconocidas).
 
-Vincula con Expo (esto escribe tu `projectId` en `app.json`, necesario para push):
-```bash
-npx eas-cli@latest login
-```
-```bash
-npx eas-cli@latest init
-```
+## 7. Push del servidor en Android (opcional, gratis)
 
-Prueba rápida (sin push remotas):
-```bash
-npx expo start
-```
-Escanea el QR con **Expo Go**. Funciona todo excepto las push remotas en Android (las notificaciones locales sí funcionan).
+Sin esto, siguen funcionando los recordatorios locales; esto añade los avisos del grupo ("fulano no registró ingresos").
 
-**Build de desarrollo (recomendado, con push):**
-```bash
-npx eas-cli@latest build --profile development --platform android
-```
-```bash
-npx eas-cli@latest build --profile development --platform ios
-```
-Instala el build en tu teléfono y luego corre `npx expo start --dev-client`.
+1. En Firebase crea un proyecto y agrega una app Android con tu nombre de paquete.
+2. Descarga `google-services.json`, súbelo a la raíz del repositorio (**Add file → Upload files**) y en `app.json`, dentro de `android`, agrega `"googleServicesFile": "./google-services.json"`.
+3. Firebase → Configuración → **Cuentas de servicio → Generar nueva clave privada**.
+4. En expo.dev abre tu proyecto → **Credentials → Android → FCM V1** y sube ese archivo.
+5. Vuelve a ejecutar el workflow del APK.
 
-## 7. Credenciales de push
+## 8. Conexión bancaria (opcional)
 
-**Android (FCM v1):**
-1. En Firebase crea un proyecto → agrega app Android con tu `android.package`.
-2. Descarga `google-services.json`, ponlo en la raíz del proyecto y agrega en `app.json` → `android`: `"googleServicesFile": "./google-services.json"`.
-3. Firebase → Configuración del proyecto → Cuentas de servicio → **Generar nueva clave privada**.
-4. Súbela a Expo:
-   ```bash
-   npx eas-cli@latest credentials
-   ```
-   Android → production → Google Service Account → **FCM V1** → sube el JSON.
+1. Crea cuenta en Belvo y genera llaves **sandbox**.
+2. Agrega a tus secretos de GitHub `BELVO_SECRET_ID` y `BELVO_SECRET_PASSWORD`, y edita `.github/workflows/deploy-functions.yml` para pasarlos en el paso "Guardar secretos" (junto con `BELVO_ENV=sandbox`), o pídeme que lo haga.
+3. Re-ejecuta "Desplegar funciones". En la app: **Más → Conexión bancaria**.
+4. Si Belvo regresa el identificador de la conexión con otro nombre de parámetro, ajusta `bank.tsx` (hoy espera `link`).
 
-**iOS (APNs):** con tu cuenta de Apple Developer, `eas build` crea y administra la llave de push automáticamente (responde "sí" cuando lo pregunte).
+## 9. Primer uso
 
-## 8. Conexión bancaria (opcional, Belvo)
-
-1. Crea cuenta en Belvo y genera llaves **sandbox** (Dashboard → Developers → API keys).
-2. Configura:
-   ```bash
-   supabase secrets set BELVO_SECRET_ID=xxx BELVO_SECRET_PASSWORD=yyy BELVO_ENV=sandbox
-   ```
-3. En la app: **Más → Conexión bancaria → Conectar banco**. En sandbox usa los bancos y credenciales de prueba que da Belvo.
-4. Cuando el widget termina, redirige a `finanzas://belvo?link=…`. Si tu cuenta de Belvo usa otro nombre de parámetro o requiere registrar la URL de callback, ajústalo en el dashboard de Belvo y en `supabase/functions/belvo/index.ts` (`widgetUrl`).
-5. Para producción (bancos reales) Belvo requiere firmar contrato y cambiar `BELVO_ENV=production`.
-
-Los movimientos importados llegan "por revisar", con categoría sugerida según tu historial, y no disparan avisos de gasto grande.
-
-## 9. Publicar en tiendas
-
-```bash
-npx eas-cli@latest build --profile production --platform all
-```
-```bash
-npx eas-cli@latest submit --platform ios
-```
-```bash
-npx eas-cli@latest submit --platform android
-```
-
-Para la ficha de las tiendas necesitas: ícono 1024×1024 (reemplaza `assets/icon.png`), capturas de pantalla, descripción y una **política de privacidad** (la app guarda datos financieros y fotos; Apple y Google la exigen).
-
-## 10. Primer uso
-
-1. Crea tu cuenta → **Crear grupo** (se cargan las categorías de tu hoja).
-2. **Más → Mi grupo → Invitar**: comparte el código de 6 letras con Grecia (o quien sea); ella crea su cuenta y elige **Tengo un código**.
-3. **Más → Formas de pago**: agrega "Nómina Ricardo", "Nómina Grecia", "HSBC 2Now", "HSBC Zero", "AMEX", etc. con día de corte y de pago.
-4. **Más → Pagos recurrentes**: agrega luz, cable/internet, Spotify, Nissan Kicks, casa, Amazon Prime, agua, etc. (lo de tu segunda hoja).
-5. **Más → Presupuestos → ✨ Sugerir con mi historial** (después de unas semanas de datos).
-6. **Más → Plan de gastos**: define el ingreso esperado y la regla 50/30/20.
+1. Abre la app → crea cuenta (o entra con la de inglés) → **Crear grupo** (se cargan las categorías de tu hoja).
+2. **Más → Mi grupo → Invitar**: comparte el código de 6 letras con Grecia.
+3. **Más → Formas de pago**: "Nómina Ricardo", "HSBC 2Now", "AMEX", etc.
+4. **Más → Pagos recurrentes**: luz, cable/internet, Spotify, Nissan Kicks, casa, etc.
+5. **Más → Presupuestos → ✨ Sugerir con mi historial** (tras unas semanas de datos) y **Más → Plan de gastos**.
 
 ### Importar tu historial de Google Sheets (opcional)
 
-Exporta la hoja como CSV y usa el **Table Editor → Import data from CSV** de Supabase sobre la tabla `transactions`. Columnas necesarias: `group_id`, `user_id`, `kind` (`income`/`expense`), `amount`, `description`, `occurred_on` (AAAA-MM-DD) y, opcional, `category_id`. Los IDs de grupo, usuarios y categorías los ves en las tablas `groups`, `profiles` y `categories`.
+Exporta la hoja como CSV y usa **Table Editor → esquema `finanzas` → `transactions` → Import data from CSV**. Columnas: `group_id`, `user_id`, `kind` (`income`/`expense`), `amount`, `description`, `occurred_on` (AAAA-MM-DD) y, opcional, `category_id`.
 
 ---
 
@@ -217,9 +143,28 @@ Exporta la hoja como CSV y usa el **Table Editor → Import data from CSV** de S
 
 | Síntoma | Causa probable |
 |--------|----------------|
-| Pantalla "Falta conectar Supabase" | `.env` vacío o no reiniciaste con `npx expo start -c` |
-| No llegan push | Estás en Expo Go (Android), falta `projectId` (paso 6) o credenciales FCM/APNs (paso 7) |
-| No llegan avisos del jueves | No corriste `cron.sql`, `CRON_SECRET` no coincide, o el miembro está "exento" en Mi grupo |
-| El asistente dice "Falta configurar ANTHROPIC_API_KEY" | Falta el secreto o redeploy de `assistant` |
-| Error al subir fotos | No corriste la migración completa (crea los buckets y políticas) |
-| `Logs` de funciones | Dashboard → Edge Functions → *función* → Logs |
+| "relation … does not exist" o la app no carga datos | Falta agregar `finanzas` en **Exposed schemas** (paso 1) |
+| Pantalla "Falta conectar Supabase" | Faltan `SUPABASE_URL` / `SUPABASE_ANON_KEY` en los secretos al compilar |
+| No llegan push del servidor | Falta el paso 7, o el cron (paso 5) |
+| No llegan avisos del jueves | No corriste `cron.sql`, `FIN_CRON_SECRET` no coincide, o el miembro está "exento" |
+| El asistente dice "Falta configurar FIN_ANTHROPIC_API_KEY" | Re-ejecuta "Desplegar funciones" con el secreto cargado |
+| Error al subir fotos | No corriste la migración completa (crea los buckets) |
+| El workflow de funciones falla | Revisa `SUPABASE_ACCESS_TOKEN` y `SUPABASE_PROJECT_REF` |
+
+## Deshacer todo (si algún día quieres quitar esta app del proyecto)
+
+Ejecuta en el SQL Editor (solo borra lo de finanzas; la app de inglés no se toca):
+
+```sql
+select cron.unschedule(jobname) from cron.job where jobname like 'fin-%';
+drop trigger if exists finanzas_on_auth_user_created on auth.users;
+drop schema finanzas cascade;
+drop policy if exists "fin evidence member read" on storage.objects;
+drop policy if exists "fin evidence member insert" on storage.objects;
+drop policy if exists "fin evidence member delete" on storage.objects;
+drop policy if exists "fin avatars public read" on storage.objects;
+drop policy if exists "fin avatars own write" on storage.objects;
+drop policy if exists "fin avatars own update" on storage.objects;
+drop policy if exists "fin avatars own delete" on storage.objects;
+```
+Y borra los buckets `fin_evidence` y `fin_avatars` desde **Storage**.

@@ -8,6 +8,7 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
 export const supabase = createClient(url ?? 'https://placeholder.supabase.co', anonKey ?? 'placeholder', {
+  db: { schema: 'finanzas' },
   auth: {
     storage: Platform.OS === 'web' && typeof window === 'undefined' ? undefined : AsyncStorage,
     autoRefreshToken: true,

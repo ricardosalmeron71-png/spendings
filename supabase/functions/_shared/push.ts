@@ -14,7 +14,7 @@ type PushMessage = {
  * Envía las notificaciones pendientes (pushed_at is null) a Expo Push.
  * Funciona aunque la app esté cerrada: el sistema operativo las muestra.
  */
-export async function flushPushQueue(db: SupabaseClient) {
+export async function flushPushQueue(db: SupabaseClient<any, any, any>) {
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { data: pending, error } = await db
     .from('notifications')

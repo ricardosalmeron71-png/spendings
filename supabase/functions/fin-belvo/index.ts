@@ -1,4 +1,4 @@
-// Edge Function: belvo
+// Edge Function: fin-belvo
 //  POST { action: 'widget_token' }                         → { access, widgetUrl }
 //  POST { action: 'register', group_id, link_id, institution, payment_method_id? }
 //  POST { action: 'sync', connection_id }

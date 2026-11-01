@@ -14,17 +14,19 @@ export function json(body: unknown, status = 200) {
 }
 
 /** Cliente con service role (salta RLS). Úsalo solo después de validar permisos. */
-export function adminClient(): SupabaseClient {
+export function adminClient(): SupabaseClient<any, any, any> {
   return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false },
+    db: { schema: 'finanzas' },
   });
 }
 
 /** Cliente que actúa como el usuario que llama (respeta RLS). */
-export function userClient(req: Request): SupabaseClient {
+export function userClient(req: Request): SupabaseClient<any, any, any> {
   return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
     auth: { persistSession: false },
+    db: { schema: 'finanzas' },
   });
 }
 
@@ -35,7 +37,7 @@ export async function requireUser(req: Request) {
   return { user: data.user, client };
 }
 
-export async function requireMember(client: SupabaseClient, groupId: string) {
+export async function requireMember(client: SupabaseClient<any, any, any>, groupId: string) {
   const { data, error } = await client.rpc('is_group_member', { gid: groupId });
   if (error || !data) throw new HttpError(403, 'No perteneces a este grupo');
 }

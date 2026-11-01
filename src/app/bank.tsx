@@ -30,14 +30,14 @@ export default function Bank() {
     setBusy('connect');
     try {
       const redirect = Linking.createURL('belvo');
-      const { widgetUrl } = await invokeFunction<{ widgetUrl: string }>('belvo', { action: 'widget_token', redirect });
+      const { widgetUrl } = await invokeFunction<{ widgetUrl: string }>('fin-belvo', { action: 'widget_token', redirect });
       const res = await WebBrowser.openAuthSessionAsync(widgetUrl, redirect);
       if (res.type !== 'success') return;
       const url = new URL(res.url);
       const link = url.searchParams.get('link') ?? url.searchParams.get('link_id');
       const institution = url.searchParams.get('institution');
       if (!link) return Alert.alert('Conexión cancelada');
-      const out = await invokeFunction<{ imported: number }>('belvo', {
+      const out = await invokeFunction<{ imported: number }>('fin-belvo', {
         action: 'register',
         group_id: groupId,
         link_id: link,
@@ -56,7 +56,7 @@ export default function Bank() {
   async function sync(id: string) {
     setBusy(id);
     try {
-      const out = await invokeFunction<{ imported: number }>('belvo', { action: 'sync', connection_id: id });
+      const out = await invokeFunction<{ imported: number }>('fin-belvo', { action: 'sync', connection_id: id });
       Alert.alert('Sincronizado', `${out.imported} movimientos nuevos`);
       refresh();
     } catch (e) {
@@ -74,7 +74,7 @@ export default function Bank() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await invokeFunction('belvo', { action: 'delete', connection_id: id });
+            await invokeFunction('fin-belvo', { action: 'delete', connection_id: id });
             refresh();
           } catch (e) {
             Alert.alert('Error', (e as Error).message);

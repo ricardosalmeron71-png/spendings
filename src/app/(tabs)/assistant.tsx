@@ -98,7 +98,7 @@ export default function Assistant() {
     setPending([{ id: 'tmp-u', role: 'user', content: msg }]);
     setThinking(true);
     try {
-      const { reply } = await invokeFunction<{ reply: string }>('assistant', { group_id: groupId, message: msg });
+      const { reply } = await invokeFunction<{ reply: string }>('fin-assistant', { group_id: groupId, message: msg });
       setPending([
         { id: 'tmp-u', role: 'user', content: msg },
         { id: 'tmp-a', role: 'assistant', content: reply },

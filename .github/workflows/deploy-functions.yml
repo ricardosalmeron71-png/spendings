@@ -1,0 +1,32 @@
+name: Desplegar funciones de Supabase
+
+# Se ejecuta a mano desde la pestaña Actions. Sube las 3 funciones `fin-*` y sus secretos
+# al proyecto de Supabase. NO modifica la base de datos ni las funciones de otras apps.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Guardar secretos (con prefijo FIN_)
+        env:
+          FIN_ANTHROPIC_API_KEY: ${{ secrets.FIN_ANTHROPIC_API_KEY }}
+          FIN_CRON_SECRET: ${{ secrets.FIN_CRON_SECRET }}
+        run: |
+          supabase secrets set --project-ref "$PROJECT_REF" \
+            FIN_ANTHROPIC_API_KEY="$FIN_ANTHROPIC_API_KEY" \
+            FIN_CRON_SECRET="$FIN_CRON_SECRET"
+      - name: Desplegar fin-assistant
+        run: supabase functions deploy fin-assistant --project-ref "$PROJECT_REF"
+      - name: Desplegar fin-belvo
+        run: supabase functions deploy fin-belvo --project-ref "$PROJECT_REF"
+      - name: Desplegar fin-scheduler (sin JWT; protegida con x-cron-secret)
+        run: supabase functions deploy fin-scheduler --no-verify-jwt --project-ref "$PROJECT_REF"

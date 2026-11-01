@@ -50,7 +50,7 @@ type BelvoTxn = {
 };
 
 /** Descarga movimientos de un link y los inserta (sin duplicar) para revisión. */
-export async function syncConnection(db: SupabaseClient, conn: {
+export async function syncConnection(db: SupabaseClient<any, any, any>, conn: {
   id: string; group_id: string; user_id: string; link_id: string; payment_method_id: string | null; last_sync_at: string | null;
 }) {
   const to = new Date().toISOString().slice(0, 10);
