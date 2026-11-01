@@ -73,11 +73,6 @@
     ],
     "experiments": {
       "typedRoutes": false
-    },
-    "extra": {
-      "eas": {
-        "projectId": "REEMPLAZA-CON-TU-EAS-PROJECT-ID"
-      }
     }
   }
 }
