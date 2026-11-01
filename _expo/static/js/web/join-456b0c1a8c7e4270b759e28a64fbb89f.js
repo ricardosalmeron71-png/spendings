@@ -1,0 +1,1 @@
+__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),Object.defineProperty(e,"default",{enumerable:!0,get:function(){return c}});var n=r(d[0]),t=r(d[1]),u=r(d[2]),o=r(d[3]);function c(){return(0,o.jsx)(u.Screen,{edges:[],children:(0,o.jsx)(t.GroupForm,{onDone:()=>n.router.back()})})}},774,[784,1145,786,6]);
