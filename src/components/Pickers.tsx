@@ -1,5 +1,5 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { fromISODate, prettyDate, toISODate } from '@/lib/dates';
 import { radius, spacing, useColors } from '@/lib/theme';
@@ -106,6 +106,19 @@ export function MethodPicker({
 export function DateField({ value, onChange, label }: { value: string; onChange: (iso: string) => void; label?: string }) {
   const c = useColors();
   const [open, setOpen] = useState(false);
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ marginBottom: spacing.md }}>
+        {label && <T variant="label" style={{ marginBottom: 6 }}>{label}</T>}
+        {createElement('input', {
+          type: 'date',
+          value,
+          onChange: (e: { target: { value: string } }) => e.target.value && onChange(e.target.value),
+          style: { backgroundColor: c.inputBg, color: c.text, borderRadius: radius.md, padding: 14, border: 'none', fontSize: 16, width: '100%', boxSizing: 'border-box' },
+        })}
+      </View>
+    );
+  }
   const picker = (
     <DateTimePicker
       value={fromISODate(value)}

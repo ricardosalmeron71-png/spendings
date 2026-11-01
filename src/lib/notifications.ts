@@ -16,14 +16,16 @@ import type { Bill } from './types';
  *     avisos del grupo (quién no registró ingresos, gastos grandes, presupuestos, etc.).
  */
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 const SETTINGS_KEY = 'notification-settings-v1';
 const TOKEN_KEY = 'expo-push-token';

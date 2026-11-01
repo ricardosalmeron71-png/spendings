@@ -110,6 +110,18 @@ Además, la app programa **notificaciones locales** en el teléfono (pagos, reco
 2. **Actions → Compilar APK Android → Run workflow**.
 3. En 15–25 minutos aparece un enlace de descarga en el resumen de la ejecución. Ábrelo en el celular, descarga el APK e instálalo (Android pedirá permitir instalar de fuentes desconocidas).
 
+## 6b. Versión web (para iPhone y cualquier navegador, gratis)
+
+Abre la app desde Safari y agrégala a la pantalla de inicio. **Limitaciones:** no tiene los recordatorios del teléfono ni notificaciones del sistema (solo la campana dentro de la app).
+
+1. Asegúrate de tener el secreto `SUPABASE_ANON_KEY`.
+2. **Actions → Publicar versión web (GitHub Pages) → Run workflow**.
+3. Cuando salga en verde: **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `gh-pages` / `(root)` → Save**.
+4. En 1–2 minutos estará en `https://ricardosalmeron71-png.github.io/spendings/`.
+5. En el iPhone, abre ese enlace en **Safari** → botón Compartir → **Agregar a pantalla de inicio**.
+
+Si Pages no te deja usarlo con un repositorio privado (el plan gratis de GitHub lo exige público), puedes hacer el repositorio público: no contiene secretos.
+
 ## 7. Push del servidor en Android (opcional, gratis)
 
 Sin esto, siguen funcionando los recordatorios locales; esto añade los avisos del grupo ("fulano no registró ingresos").

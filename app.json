@@ -36,7 +36,13 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "Finanzas en Grupo",
+      "shortName": "Finanzas",
+      "backgroundColor": "#6C5CE7",
+      "themeColor": "#6C5CE7"
     },
     "plugins": [
       "expo-router",
@@ -72,7 +78,8 @@
       "expo-font"
     ],
     "experiments": {
-      "typedRoutes": false
+      "typedRoutes": false,
+      "baseUrl": "/spendings"
     }
   }
 }

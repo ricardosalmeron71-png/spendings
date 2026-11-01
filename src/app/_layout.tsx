@@ -4,7 +4,7 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { Platform, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SetupRequired } from '@/components/SetupRequired';
 import { Loading } from '@/components/ui';
@@ -12,6 +12,7 @@ import { ensureChannels, registerPushToken } from '@/lib/notifications';
 import { SessionProvider, useSession } from '@/lib/session';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { darkColors, lightColors } from '@/lib/theme';
+import '@/lib/webAlert';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -21,6 +22,7 @@ const queryClient = new QueryClient({
 
 function useNotificationNavigation() {
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const open = (data: Record<string, unknown> | undefined) => {
       const screen = data?.screen;
       if (typeof screen === 'string') setTimeout(() => router.push(screen as never), 300);

@@ -1,0 +1,43 @@
+name: Publicar versión web (GitHub Pages)
+
+# Compila la app para web y la sube a la rama `gh-pages`.
+# Después activa Pages en Settings → Pages → Source: "Deploy from a branch" → gh-pages.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Verificar llave pública de Supabase
+        env:
+          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "::error::Falta el secreto SUPABASE_ANON_KEY"; exit 1; fi
+      - name: Exportar para web
+        env:
+          CI: "1"
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bwdkfahrgvqfqxryjfll.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: npx expo export --platform web --output-dir dist
+      - name: Preparar para GitHub Pages
+        run: |
+          touch dist/.nojekyll          # sin esto Pages ignora la carpeta _expo
+          cp dist/index.html dist/404.html   # al recargar una pantalla interna, vuelve a la app
+      - name: Publicar en la rama gh-pages
+        run: |
+          cd dist
+          git init -q -b gh-pages
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publicar versión web"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

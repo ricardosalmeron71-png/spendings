@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, View } from 'react-native';
+import { Alert, Linking, Platform, View } from 'react-native';
 import { Button, Card, Chip, Screen, SwitchRow, T } from '@/components/ui';
 import { useBills } from '@/hooks/queries';
 import { WEEKDAYS } from '@/lib/dates';
@@ -9,6 +9,22 @@ import { useGroup } from '@/lib/session';
 import { spacing } from '@/lib/theme';
 
 export default function Reminders() {
+  if (Platform.OS === 'web') {
+    return (
+      <Screen edges={[]}>
+        <Card>
+          <T style={{ fontWeight: '700' }}>No disponible en la versión web</T>
+          <T variant="small" style={{ marginTop: 6 }}>
+            Los recordatorios con la app cerrada requieren la app instalada de Android. En la versión web solo verás los avisos dentro de la app (campana de notificaciones).
+          </T>
+        </Card>
+      </Screen>
+    );
+  }
+  return <RemindersNative />;
+}
+
+function RemindersNative() {
   const { group } = useGroup();
   const bills = useBills().data ?? [];
   const [s, setS] = useState<ReminderSettings>(DEFAULT_SETTINGS);
