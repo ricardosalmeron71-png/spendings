@@ -742,6 +742,27 @@ do $$ begin
 exception when others then null; end $$;
 
 
+-- ---------------------------------------------------------------------
+-- Tope diario de preguntas al asistente (controla el costo de la IA)
+-- ---------------------------------------------------------------------
+create table if not exists finanzas.assistant_usage (
+  user_id uuid not null references finanzas.profiles(id) on delete cascade,
+  day     date not null default current_date,
+  count   int  not null default 0,
+  primary key (user_id, day)
+);
+alter table finanzas.assistant_usage enable row level security; -- sin políticas: solo lo usa el servidor
+
+create or replace function finanzas.use_assistant_quota(p_user uuid, p_limit int)
+returns boolean language plpgsql security definer set search_path = finanzas, public as $$
+declare c int;
+begin
+  insert into assistant_usage as u (user_id, day, count) values (p_user, current_date, 1)
+  on conflict (user_id, day) do update set count = u.count + 1 where u.count < p_limit
+  returning u.count into c;
+  return c is not null;
+end $$;
+
 -- =====================================================================
 --  Permisos de la API (PostgREST) para el esquema finanzas
 --  La seguridad real la imponen las políticas RLS de arriba.
@@ -754,3 +775,6 @@ grant execute on all functions in schema finanzas to authenticated, service_role
 alter default privileges in schema finanzas grant select, insert, update, delete on tables to authenticated;
 alter default privileges in schema finanzas grant all on tables to service_role;
 alter default privileges in schema finanzas grant execute on functions to authenticated, service_role;
+
+-- Solo el servidor (service_role) puede consumir cuota; ningún usuario puede gastar la de otro
+revoke execute on function finanzas.use_assistant_quota(uuid, int) from authenticated;

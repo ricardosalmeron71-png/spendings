@@ -84,7 +84,7 @@ En tu repositorio: **Settings → Secrets and variables → Actions → New repo
 
 ## 5. Tareas programadas (avisos con la app cerrada)
 
-1. En Supabase: **Database → Extensions** → activa **pg_cron** y **pg_net** (si no estaban).
+1. `pg_cron`, `pg_net` y `supabase_vault` ya están activas en tu proyecto (las usa la app de inglés): no hay que activar nada.
 2. Abre `supabase/cron.sql` en GitHub (*Raw*), cópialo y, antes de pegarlo en el **SQL Editor**, reemplaza:
    - `<<<TU-PROJECT-REF>>>` → `bwdkfahrgvqfqxryjfll`
    - `<<<EL MISMO VALOR QUE FIN_CRON_SECRET>>>` → tu cadena aleatoria
@@ -97,6 +97,8 @@ En tu repositorio: **Settings → Secrets and variables → Actions → New repo
 | `fin-bill-reminders` | diario 9:00 CDMX | Pagos por vencer y vencidos |
 | `fin-monthly-summary` | día 1, 10:00 | Resumen del mes anterior |
 | `fin-bank-sync` | cada 6 h | Importa movimientos bancarios (solo si configuras Belvo) |
+
+La tarea `englishup-reminders` de la app de inglés no se toca; las mías conviven a su lado.
 
 Además, la app programa **notificaciones locales** en el teléfono (pagos, recordatorio del jueves y diario) que funcionan con la app cerrada y sin internet.
 
@@ -148,6 +150,7 @@ Exporta la hoja como CSV y usa **Table Editor → esquema `finanzas` → `transa
 | No llegan push del servidor | Falta el paso 7, o el cron (paso 5) |
 | No llegan avisos del jueves | No corriste `cron.sql`, `FIN_CRON_SECRET` no coincide, o el miembro está "exento" |
 | El asistente dice "Falta configurar FIN_ANTHROPIC_API_KEY" | Re-ejecuta "Desplegar funciones" con el secreto cargado |
+| "Llegaste al límite de preguntas por hoy" | Tope diario del asistente (30 por persona). Se cambia con el secreto `FIN_ASSISTANT_DAILY_LIMIT` |
 | Error al subir fotos | No corriste la migración completa (crea los buckets) |
 | El workflow de funciones falla | Revisa `SUPABASE_ACCESS_TOKEN` y `SUPABASE_PROJECT_REF` |
 

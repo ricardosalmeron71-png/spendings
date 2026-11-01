@@ -102,7 +102,12 @@ Deno.serve(async (req) => {
     if (message.length > 4000) throw new HttpError(400, 'Mensaje demasiado largo');
     await requireMember(client, group_id);
 
+    // Tope diario por persona para controlar el costo de la IA
     const db = adminClient();
+    const limit = Number(Deno.env.get('FIN_ASSISTANT_DAILY_LIMIT') ?? 30);
+    const { data: allowed } = await db.rpc('use_assistant_quota', { p_user: user.id, p_limit: limit });
+    if (!allowed) throw new HttpError(429, `Llegaste al límite de ${limit} preguntas por hoy. Mañana se reinicia.`);
+
     const { data: history } = await db
       .from('assistant_messages')
       .select('role, content')
