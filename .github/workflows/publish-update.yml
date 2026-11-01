@@ -1,0 +1,38 @@
+name: Publicar actualización Android (por aire)
+
+# Cada cambio en el código de la app se publica solo y los teléfonos con el APK
+# instalado lo descargan al abrir la app. NO hay que volver a compilar ni instalar el APK.
+# Solo se necesita un APK nuevo cuando cambian librerías nativas o la versión en app.json.
+on:
+  push:
+    branches: [claude/eloquent-ramanujan-dsz763, main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ota-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm install
+      - name: Publicar actualización
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bwdkfahrgvqfqxryjfll.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then echo "::error::Falta el secreto SUPABASE_ANON_KEY"; exit 1; fi
+          npx eas-cli update --branch production --platform android --non-interactive \
+            --message "${{ github.event.head_commit.message || 'Actualización manual' }}"

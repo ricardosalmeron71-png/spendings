@@ -110,6 +110,15 @@ Además, la app programa **notificaciones locales** en el teléfono (pagos, reco
 2. **Actions → Compilar APK Android → Run workflow**.
 3. En 15–25 minutos aparece un enlace de descarga en el resumen de la ejecución. Ábrelo en el celular, descarga el APK e instálalo (Android pedirá permitir instalar de fuentes desconocidas).
 
+### Actualizaciones automáticas (sin volver a instalar el APK)
+
+El APK incluye `expo-updates`. Después de instalarlo **una vez**:
+- Cada cambio en `src/` o `assets/` que se suba a la rama dispara **Publicar actualización Android (por aire)**, y la web se republica sola.
+- Los teléfonos descargan la actualización al **abrir la app** (si tarda más de 3 segundos, se aplica la siguiente vez que la abras).
+- También puedes lanzarla a mano: **Actions → Publicar actualización Android → Run workflow**.
+
+**Cuándo SÍ hay que compilar y reinstalar un APK nuevo:** si se agrega o actualiza una librería nativa, se cambian permisos o plugins, o se sube el número `version` de `app.json`. Una actualización por aire solo llega a los APK con la misma `version`; por eso, si cambian librerías nativas, hay que subir la `version` para que los APK viejos no reciban código que no soportan.
+
 ## 6b. Versión web (para iPhone y cualquier navegador, gratis)
 
 Abre la app desde Safari y agrégala a la pantalla de inicio. **Limitaciones:** no tiene los recordatorios del teléfono ni notificaciones del sistema (solo la campana dentro de la app).

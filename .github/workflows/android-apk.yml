@@ -16,8 +16,6 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm install
-      - name: Vincular proyecto con Expo (escribe el projectId)
-        run: npx eas-cli init --force --non-interactive
       - name: Inyectar llaves públicas de Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bwdkfahrgvqfqxryjfll.supabase.co' }}

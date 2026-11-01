@@ -80,6 +80,19 @@
     "experiments": {
       "typedRoutes": false,
       "baseUrl": "/spendings"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ab19ba00-53c0-42f7-9252-dcd5f00fad63",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ab19ba00-53c0-42f7-9252-dcd5f00fad63"
+      }
     }
   }
 }

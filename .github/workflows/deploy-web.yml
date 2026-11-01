@@ -4,6 +4,11 @@ name: Publicar versión web (GitHub Pages)
 # Después activa Pages en Settings → Pages → Source: "Deploy from a branch" → gh-pages.
 on:
   workflow_dispatch:
+  push:
+    branches: [claude/eloquent-ramanujan-dsz763, main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
 
 permissions:
   contents: write
