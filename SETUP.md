@@ -72,7 +72,7 @@ En tu repositorio: **Settings → Secrets and variables → Actions → New repo
 | `SUPABASE_URL` | `https://bwdkfahrgvqfqxryjfll.supabase.co` |
 | `SUPABASE_ANON_KEY` | la llave `anon public` |
 | `SUPABASE_PROJECT_REF` | `bwdkfahrgvqfqxryjfll` |
-| `SUPABASE_ACCESS_TOKEN` | el token de Supabase |
+| `SUPABASE_ACCESS_TOKEN` | el token de Supabase (también se acepta el nombre `FINANZAS_GITHUB`) |
 | `FIN_ANTHROPIC_API_KEY` | tu llave de Anthropic |
 | `FIN_CRON_SECRET` | tu cadena aleatoria |
 | `EXPO_TOKEN` | el token de Expo |
