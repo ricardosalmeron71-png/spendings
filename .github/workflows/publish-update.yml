@@ -9,6 +9,7 @@ on:
     paths:
       - 'src/**'
       - 'assets/**'
+      - '.github/workflows/publish-update.yml'
   workflow_dispatch:
 
 concurrency:
@@ -32,7 +33,9 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://bwdkfahrgvqfqxryjfll.supabase.co' }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # El mensaje va en una variable (nunca pegado en el comando) para que comillas o saltos de línea no lo rompan
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then echo "::error::Falta el secreto SUPABASE_ANON_KEY"; exit 1; fi
-          npx eas-cli update --branch production --platform android --non-interactive \
-            --message "${{ github.event.head_commit.message || 'Actualización manual' }}"
+          MSG="$(printf '%s' "${COMMIT_MESSAGE:-Actualización manual}" | head -n 1 | cut -c1-120)"
+          npx eas-cli update --branch production --platform android --non-interactive --message "$MSG"
