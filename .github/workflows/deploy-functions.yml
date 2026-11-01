@@ -22,10 +22,15 @@ jobs:
         env:
           FIN_ANTHROPIC_API_KEY: ${{ secrets.FIN_ANTHROPIC_API_KEY }}
           FIN_CRON_SECRET: ${{ secrets.FIN_CRON_SECRET }}
+          BELVO_SECRET_ID: ${{ secrets.BELVO_SECRET_ID }}
+          BELVO_SECRET_PASSWORD: ${{ secrets.BELVO_SECRET_PASSWORD }}
+          BELVO_ENV: ${{ secrets.BELVO_ENV }}
         run: |
-          supabase secrets set --project-ref "$PROJECT_REF" \
-            FIN_ANTHROPIC_API_KEY="$FIN_ANTHROPIC_API_KEY" \
-            FIN_CRON_SECRET="$FIN_CRON_SECRET"
+          args=("FIN_ANTHROPIC_API_KEY=$FIN_ANTHROPIC_API_KEY" "FIN_CRON_SECRET=$FIN_CRON_SECRET")
+          if [ -n "$BELVO_SECRET_ID" ] && [ -n "$BELVO_SECRET_PASSWORD" ]; then
+            args+=("BELVO_SECRET_ID=$BELVO_SECRET_ID" "BELVO_SECRET_PASSWORD=$BELVO_SECRET_PASSWORD" "BELVO_ENV=${BELVO_ENV:-sandbox}")
+          fi
+          supabase secrets set --project-ref "$PROJECT_REF" "${args[@]}"
       - name: Desplegar fin-assistant
         run: supabase functions deploy fin-assistant --project-ref "$PROJECT_REF"
       - name: Desplegar fin-belvo

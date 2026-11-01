@@ -28,13 +28,24 @@ export async function belvoFetch(path: string, init: RequestInit = {}) {
 }
 
 /** Token de acceso para el widget de conexión (lo genera el servidor, nunca la app). */
-export async function widgetToken() {
+export async function widgetToken(scheme: string) {
   return belvoFetch('/api/token/', {
     method: 'POST',
     body: JSON.stringify({
       id: Deno.env.get('BELVO_SECRET_ID'),
       password: Deno.env.get('BELVO_SECRET_PASSWORD'),
-      scopes: 'read_institutions,write_links,read_links',
+      scopes: 'read_institutions,write_links',
+      stale_in: '365d',
+      credentials_storage: 'store',
+      fetch_resources: ['ACCOUNTS', 'TRANSACTIONS'],
+      widget: {
+        // Direcciones a las que el widget regresa a la app: finanzas://success?link=...&institution=...
+        callback_urls: {
+          success: `${scheme}://success`,
+          exit: `${scheme}://exit`,
+          event: `${scheme}://error`,
+        },
+      },
     }),
   }) as Promise<{ access: string; refresh: string }>;
 }

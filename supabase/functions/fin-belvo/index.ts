@@ -16,12 +16,13 @@ Deno.serve(async (req) => {
 
     switch (body.action) {
       case 'widget_token': {
-        const { access } = await widgetToken();
-        const redirect = encodeURIComponent(body.redirect ?? 'finanzas://belvo');
+        const scheme = 'finanzas'; // el mismo `scheme` de app.json
+        const { access } = await widgetToken(scheme);
         const widgetUrl =
           `https://widget.belvo.io/?access_token=${access}&locale=es&country_codes=MX` +
-          `&institution_types=retail,business&callback=${redirect}`;
-        return json({ access, widgetUrl });
+          `&institution_types=retail,business&resources=ACCOUNTS,TRANSACTIONS` +
+          `&external_id=fin_${user.id}&show_abandon_survey=false`;
+        return json({ access, widgetUrl, scheme });
       }
       case 'register': {
         await requireMember(client, body.group_id);

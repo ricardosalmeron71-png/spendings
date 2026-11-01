@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { MethodPicker } from '@/components/Pickers';
 import { Button, Card, Divider, IconCircle, Screen, SectionHeader, T } from '@/components/ui';
 import { useBankConnections, useMembers, usePaymentMethods } from '@/hooks/queries';
@@ -27,21 +27,27 @@ export default function Bank() {
   };
 
   async function connect() {
+    if (Platform.OS === 'web') {
+      return Alert.alert('Solo en la app', 'La conexión bancaria está disponible en la app instalada de Android.');
+    }
     setBusy('connect');
     try {
-      const redirect = Linking.createURL('belvo');
-      const { widgetUrl } = await invokeFunction<{ widgetUrl: string }>('fin-belvo', { action: 'widget_token', redirect });
-      const res = await WebBrowser.openAuthSessionAsync(widgetUrl, redirect);
+      const { widgetUrl, scheme } = await invokeFunction<{ widgetUrl: string; scheme: string }>('fin-belvo', { action: 'widget_token' });
+      const res = await WebBrowser.openAuthSessionAsync(widgetUrl, `${scheme}://`);
       if (res.type !== 'success') return;
-      const url = new URL(res.url);
-      const link = url.searchParams.get('link') ?? url.searchParams.get('link_id');
-      const institution = url.searchParams.get('institution');
-      if (!link) return Alert.alert('Conexión cancelada');
+      const parsed = Linking.parse(res.url);
+      if (parsed.hostname === 'exit') return;
+      if (parsed.hostname === 'error') {
+        return Alert.alert('Conexión bancaria', String(parsed.queryParams?.error_message ?? 'El banco no pudo conectarse. Intenta de nuevo.'));
+      }
+      const link = parsed.queryParams?.link;
+      const institution = parsed.queryParams?.institution;
+      if (typeof link !== 'string') return Alert.alert('Conexión cancelada');
       const out = await invokeFunction<{ imported: number }>('fin-belvo', {
         action: 'register',
         group_id: groupId,
         link_id: link,
-        institution,
+        institution: typeof institution === 'string' ? institution : null,
         payment_method_id: methodId,
       });
       Alert.alert('¡Banco conectado! 🏦', `Importamos ${out.imported} movimientos para revisión.`);

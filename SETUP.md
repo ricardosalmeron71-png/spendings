@@ -141,12 +141,20 @@ Sin esto, siguen funcionando los recordatorios locales; esto añade los avisos d
 4. En expo.dev abre tu proyecto → **Credentials → Android → FCM V1** y sube ese archivo.
 5. Vuelve a ejecutar el workflow del APK.
 
-## 8. Conexión bancaria (opcional)
+## 8. Conexión bancaria (opcional, Belvo)
 
-1. Crea cuenta en Belvo y genera llaves **sandbox**.
-2. Agrega a tus secretos de GitHub `BELVO_SECRET_ID` y `BELVO_SECRET_PASSWORD`, y edita `.github/workflows/deploy-functions.yml` para pasarlos en el paso "Guardar secretos" (junto con `BELVO_ENV=sandbox`), o pídeme que lo haga.
-3. Re-ejecuta "Desplegar funciones". En la app: **Más → Conexión bancaria**.
-4. Si Belvo regresa el identificador de la conexión con otro nombre de parámetro, ajusta `bank.tsx` (hoy espera `link`).
+**Sandbox (gratis, solo para probar):** usa bancos de mentira que da Belvo. Para conectar **tus bancos reales** Belvo exige pasar a producción, que requiere contrato con ellos; pregunta precio y requisitos en belvo.com antes de contar con esto.
+
+1. Crea cuenta en Belvo y, en su panel, genera llaves **sandbox** (Developers → API keys): un `id` y un `password` (Secret ID y Secret Password).
+2. En GitHub, **Settings → Secrets and variables → Actions**, agrega:
+   - `BELVO_SECRET_ID`
+   - `BELVO_SECRET_PASSWORD`
+   - `BELVO_ENV` con el valor `sandbox` (cámbialo a `production` cuando Belvo te habilite producción)
+3. **Actions → Desplegar funciones de Supabase → Run workflow** (guarda las llaves en Supabase).
+4. En la app Android: **Más → Conexión bancaria → Conectar banco**. Elige un banco de prueba y usa las credenciales de prueba que muestra Belvo.
+5. Los movimientos llegan marcados "por revisar" y se sincronizan cada 6 horas. Revísalos en **Movimientos → Por revisar**.
+
+La conexión solo funciona en la app Android instalada, no en la web ni en Expo Go.
 
 ## 9. Primer uso
 
