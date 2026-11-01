@@ -1,4 +1,4 @@
-# 💰 Finanzas en Grupo
+# 💰 spendings$$
 
 App móvil (Android y iPhone) para controlar ingresos, gastos, pagos y metas **en familia o en grupo**, con asistente inteligente, recordatorios aunque la app esté cerrada y conexión bancaria opcional.
 

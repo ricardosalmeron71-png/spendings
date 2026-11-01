@@ -191,6 +191,9 @@ function TransactionForm({
             <T color={c.primary} style={{ fontWeight: '600' }}>{showAllCats ? 'Ver menos' : `Ver todas (${kindCats.length})`}</T>
           </Pressable>
         )}
+        <Pressable onPress={() => router.push('/categories')} style={{ alignItems: 'center', paddingTop: 10 }}>
+          <T color={c.primary} style={{ fontWeight: '600' }}>＋ Crear categoría nueva</T>
+        </Pressable>
       </Card>
 
       {members.length > 1 && (
@@ -204,7 +207,7 @@ function TransactionForm({
 
       <T variant="label" style={{ marginBottom: 6 }}>Forma de pago</T>
       <View style={{ marginBottom: spacing.md }}>
-        <MethodPicker methods={methods} value={methodId} onChange={setMethodId} />
+        <MethodPicker methods={methods} value={methodId} onChange={setMethodId} onAdd={() => router.push('/payment-methods')} />
       </View>
 
       <DateField label="Fecha" value={date} onChange={setDate} />

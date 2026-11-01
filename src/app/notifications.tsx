@@ -14,6 +14,7 @@ const ICONS: Record<string, { icon: string; color: string }> = {
   income_missing_group: { icon: 'people', color: '#FFA928' },
   income_added: { icon: 'cash', color: '#1DB173' },
   big_expense: { icon: 'trending-up', color: '#F0506E' },
+  expense_added: { icon: 'receipt', color: '#2E90FA' },
   budget_warning: { icon: 'warning', color: '#FFA928' },
   budget_exceeded: { icon: 'alert-circle', color: '#F0506E' },
   bill_due: { icon: 'calendar', color: '#2E90FA' },

@@ -154,7 +154,7 @@ function BillForm({ id, bill }: { id: string; bill?: Bill }) {
 
       <T variant="label" style={{ marginBottom: 6 }}>Se paga con</T>
       <View style={{ marginBottom: spacing.md }}>
-        <MethodPicker methods={methods} value={methodId} onChange={setMethodId} />
+        <MethodPicker methods={methods} value={methodId} onChange={setMethodId} onAdd={() => router.push('/payment-methods')} />
       </View>
 
       {members.length > 1 && (

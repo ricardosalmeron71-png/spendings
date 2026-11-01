@@ -1,4 +1,4 @@
-# Guía de instalación — Finanzas en Grupo
+# Guía de instalación — spendings$$
 
 Esta guía asume que usas tu proyecto de Supabase **`ingles`** (el mismo de tu app de inglés) y que todo se hace **desde el celular**, con el navegador y GitHub. Sin computadora.
 
@@ -51,6 +51,10 @@ Copia también, de esa misma pantalla de API:
 - el **Project ref**: `bwdkfahrgvqfqxryjfll` (la parte antes de `.supabase.co`)
 
 En **Authentication → URL Configuration → Redirect URLs** agrega `finanzas://` (solo añade, no cambia nada existente).
+
+## 1b. Segunda migración: avisos de movimientos de otros
+
+Ejecuta también `supabase/migrations/20261101010000_notify_activity.sql` (mismo procedimiento: *Raw* → copiar → SQL Editor → Run). Con ella, cada gasto o ingreso que registre otra persona del grupo te llega como notificación; cada quien puede apagarlo en **Más → Mi grupo → "Avisarme de movimientos de otros"**.
 
 ## 2. Llaves y tokens
 

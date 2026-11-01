@@ -79,10 +79,12 @@ export function MethodPicker({
   methods,
   value,
   onChange,
+  onAdd,
 }: {
   methods: PaymentMethod[];
   value: string | null;
   onChange: (id: string | null) => void;
+  onAdd?: () => void;
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -99,6 +101,7 @@ export function MethodPicker({
             onPress={() => onChange(m.id)}
           />
         ))}
+      {onAdd && <Chip label="＋ Nueva tarjeta / cuenta" icon="add" onPress={onAdd} />}
     </ScrollView>
   );
 }

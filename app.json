@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Finanzas en Grupo",
+    "name": "spendings$$",
     "slug": "finanzas-grupo",
     "scheme": "finanzas",
     "version": "1.0.0",
@@ -39,8 +39,8 @@
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "name": "Finanzas en Grupo",
-      "shortName": "Finanzas",
+      "name": "spendings$$",
+      "shortName": "spendings$$",
       "backgroundColor": "#6C5CE7",
       "themeColor": "#6C5CE7"
     },

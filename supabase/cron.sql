@@ -1,5 +1,5 @@
 -- =====================================================================
---  Tareas programadas de Finanzas en Grupo (recordatorios con la app cerrada)
+--  Tareas programadas de spendings$$ (recordatorios con la app cerrada)
 --
 --  Ejecuta este archivo UNA vez en el SQL Editor DESPUÉS de:
 --    1) correr la migración inicial

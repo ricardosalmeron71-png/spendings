@@ -31,7 +31,7 @@ export default function GroupScreen() {
 
   async function share() {
     await Share.share({
-      message: `¡Únete a "${group.name}" en Finanzas en Grupo! 💰\nDescarga la app y usa el código: ${group.invite_code}`,
+      message: `¡Únete a "${group.name}" en spendings$$! 💰\nDescarga la app y usa el código: ${group.invite_code}`,
     });
   }
 
@@ -103,6 +103,21 @@ export default function GroupScreen() {
           {isAdmin && <Button title="Nuevo código" variant="secondary" small onPress={newCode} />}
         </View>
       </Card>
+
+      {me?.notify_activity !== undefined && (
+        <Card style={{ paddingVertical: 0 }}>
+          <SwitchRow
+            title="Avisarme de movimientos de otros"
+            subtitle="Recibe una notificación cuando alguien del grupo registre un gasto o ingreso"
+            value={me.notify_activity}
+            onChange={async (v) => {
+              const { error } = await supabase.rpc('set_my_notify_activity', { p_group: group.id, p_value: v });
+              if (error) Alert.alert('No se pudo guardar', error.message);
+              invalidate();
+            }}
+          />
+        </Card>
+      )}
 
       <SectionHeader title={`Miembros (${members.length})`} />
       <Card style={{ paddingVertical: 4 }}>

@@ -82,7 +82,7 @@ export function useMembers() {
       unwrap(
         await supabase
           .from('group_members')
-          .select('group_id, user_id, role, requires_weekly_income, profiles(id, full_name, avatar_url, avatar_emoji, avatar_color)')
+          .select('*, profiles(id, full_name, avatar_url, avatar_emoji, avatar_color)')
           .eq('group_id', groupId)
           .order('joined_at'),
       ) as unknown as Member[],

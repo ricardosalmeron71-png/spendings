@@ -62,7 +62,7 @@ export default function SignIn() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: spacing.xl }} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
             <Text style={{ fontSize: 56 }}>💰</Text>
-            <Text style={{ color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 8 }}>Finanzas en Grupo</Text>
+            <Text style={{ color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 8 }}>spendings$$</Text>
             <Text style={{ color: '#ffffffcc', fontSize: 15, marginTop: 6, textAlign: 'center' }}>
               Controla gastos, ingresos y metas con tu familia. Con asistente inteligente.
             </Text>

@@ -1,5 +1,5 @@
 -- =====================================================================
---  Finanzas en Grupo — esquema inicial
+--  spendings$$ — esquema inicial
 --  Todo vive en el esquema `finanzas`: NO toca las tablas, funciones ni
 --  usuarios de otras apps que compartan el mismo proyecto de Supabase.
 --  Ejecuta este archivo completo en Supabase → SQL Editor.

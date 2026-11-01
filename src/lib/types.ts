@@ -29,6 +29,7 @@ export interface Member {
   user_id: string;
   role: MemberRole;
   requires_weekly_income: boolean;
+  notify_activity?: boolean;
   profiles: Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'avatar_emoji' | 'avatar_color'>;
 }
 
