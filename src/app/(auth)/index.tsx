@@ -5,6 +5,15 @@ import { Button, Input, Segmented, T } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { radius, spacing, useColors } from '@/lib/theme';
 
+function friendly(msg: string) {
+  if (/already registered/i.test(msg))
+    return 'Ese correo ya tiene cuenta (por ejemplo, la de la app de inglés). Escribe tu contraseña y toca «Entrar».';
+  if (/invalid login credentials/i.test(msg)) return 'Correo o contraseña incorrectos.';
+  if (/email not confirmed/i.test(msg)) return 'Falta confirmar tu correo. Revisa tu bandeja de entrada.';
+  if (/rate limit|too many/i.test(msg)) return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+  return msg;
+}
+
 export default function SignIn() {
   const c = useColors();
   const [mode, setMode] = useState<'in' | 'up'>('in');
@@ -33,7 +42,9 @@ export default function SignIn() {
         if (!data.session) Alert.alert('Revisa tu correo', 'Te enviamos un enlace para confirmar tu cuenta.');
       }
     } catch (e) {
-      Alert.alert('Ups', (e as Error).message);
+      const msg = (e as Error).message;
+      if (/already registered/i.test(msg)) setMode('in');
+      Alert.alert('Ups', friendly(msg));
     } finally {
       setBusy(false);
     }
